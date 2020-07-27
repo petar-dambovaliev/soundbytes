@@ -1,32 +1,42 @@
-mod play;
+mod interpreter;
+mod player;
 
+extern crate cpal;
 extern crate crossbeam_channel;
-extern crate nannou_audio;
+extern crate env_logger;
+extern crate lazy_static;
+extern crate log;
+extern crate relative_path;
 
-use play::{Audio, Note, Octave, Player};
-use std::time::Duration;
+use interpreter::repl;
+use log::error;
+use relative_path::RelativePath;
+use std::env;
+use std::fs::File;
+use std::io::stdout;
 
 fn main() {
-    let player = Player::new(Default::default()).unwrap();
-    let (note_sender, err_receiver) = player.spawn();
-    let notes = vec![
-        (Note::C, Octave::Four),
-        (Note::C, Octave::Five),
-        (Note::G, Octave::Four),
-        (Note::G, Octave::Five),
-    ];
+    env::set_var("RUST_LOG", "soundbytes=info");
+    env_logger::init();
+    let args: Vec<String> = env::args().collect();
 
-    for (note, octave) in notes {
-        if let Err(e) = note_sender.send(Audio {
-            phase: 0.0,
-            hz: note.clone().frequency(octave),
-        }) {
-            println!("could not send note {:?} error {:?}", note, e);
+    let s = match args.get(1) {
+        Some(s) => s,
+        None => {
+            error!("no input given");
+            return;
         }
+    };
 
-        if let Ok(e) = err_receiver.try_recv() {
-            println!("{:?}", e);
+    let path = RelativePath::new(s);
+    let display = path.to_string();
+
+    let file = match File::open(path.to_path(".")) {
+        Ok(file) => file,
+        Err(why) => {
+            error!("couldn't open {}: {}", display, why);
+            return;
         }
-        std::thread::sleep(Duration::from_millis(200));
-    }
+    };
+    repl::start(file, stdout());
 }

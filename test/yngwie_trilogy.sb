@@ -1,0 +1,27 @@
+let t = 66;
+
+tempo(t);
+
+// write vscode plugin
+// add lines in the error messages
+// allow for trailing comments
+// implement export code for https://lilypond.org/text-input.html
+
+let bass = track(a_3_8*, b, g#_2_8*, a_3_8*, f_2_8*, f#, g, g);
+let bass2 = track(x_8*, x, g#_2_16, b_3_16, d, f, e, c_2_16, e);
+let solo = track(
+        a_5_32, c, e, a, c, e, b, d,
+        f, b, d, f, g#_4_32, b_5_32, d, g#_4_32,
+        b_5_32, d, a, c, e, a, c, e,
+        f_4_32, a_5_32, c, f_4_32, a_5_32, c, f#_4_32, a_5_32,
+        c, f#_4_32, a_5_32, c, f, e, d, c,
+        b, a, b, c, d, e, f, g
+);
+
+play(bass, bass2, solo);
+
+play(x_16);
+
+tempo(t * 2);
+
+play(bass, bass2, solo);
