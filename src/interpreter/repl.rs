@@ -1,24 +1,30 @@
+use crate::interpreter::ast::Node;
+use crate::interpreter::eval::eval;
 use crate::interpreter::lexer::Lexer;
 use crate::interpreter::object::Env;
+use crate::interpreter::parser::Parser;
 use std::io::{BufRead, BufReader, Read, Write};
 use std::result::Result::Ok;
 
 const PROMPT: &[u8; 3] = b">> ";
 
-pub fn start(in_: impl Read, mut out: impl Write) {
+pub fn start(in_: impl Read, mut out: impl Write + std::fmt::Write) {
     let buf_reader = BufReader::new(in_);
     let env = Env::new();
 
     for line in buf_reader.lines() {
         if let Ok(text) = line {
             let _ = out.write(PROMPT);
-            let lex = Lexer::new(text.as_str());
 
-            //         evaluated := evaluator.Eval(program, env)
-            //         if evaluated != nil {
-            //             io.WriteString(out, evaluated.Inspect())
-            //             io.WriteString(out, "\n")
-            //         }
+            let lex = Lexer::new(text.as_str());
+            let mut p = Parser::new(lex);
+
+            let program = Box::new(p.parse_program());
+            for expr in program.exprs {
+                let evaluated = eval(expr.to_node(), &env);
+                out.write_str(&evaluated.inspect());
+                out.write_char('\n');
+            }
         }
     }
 }

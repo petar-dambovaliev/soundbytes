@@ -22,11 +22,30 @@ impl Debug for Type {
     }
 }
 
-pub trait Object {
-    fn get_type(self) -> Type;
+pub trait Object: CloneObj {
+    fn get_type(self: Box<Self>) -> Type;
     fn inspect(&self) -> String;
     fn is_error(&self) -> bool {
         false
+    }
+}
+
+pub trait CloneObj {
+    fn clone_obj(&self) -> Box<dyn Object>;
+}
+
+impl<T> CloneObj for T
+where
+    T: Object + Clone + 'static,
+{
+    fn clone_obj(&self) -> Box<dyn Object> {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for Box<dyn Object> {
+    fn clone(&self) -> Self {
+        self.clone_obj()
     }
 }
 
@@ -36,7 +55,7 @@ pub struct IntObj {
 }
 
 impl Object for IntObj {
-    fn get_type(self) -> Type {
+    fn get_type(self: Box<Self>) -> Type {
         Type::Int(self.value)
     }
 
@@ -51,7 +70,7 @@ pub struct FloatObj {
 }
 
 impl Object for FloatObj {
-    fn get_type(self) -> Type {
+    fn get_type(self: Box<Self>) -> Type {
         Type::Float(self.value)
     }
 
@@ -60,13 +79,13 @@ impl Object for FloatObj {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StringObj {
     pub(crate) value: String,
 }
 
 impl Object for StringObj {
-    fn get_type(self) -> Type {
+    fn get_type(self: Box<Self>) -> Type {
         Type::String(self.value)
     }
 
@@ -79,12 +98,13 @@ pub trait BuiltinFn: Fn(Vec<Box<dyn Object>>) -> Box<dyn Object> + Sync {}
 impl BuiltinFn for fn(Vec<Box<dyn Object>>) -> Box<dyn Object> {}
 type DefaultBuiltinFunc = fn(Vec<Box<dyn Object>>) -> Box<dyn Object>;
 
+#[derive(Clone)]
 pub struct BuiltinObj {
     pub(crate) value: DefaultBuiltinFunc,
 }
 
 impl Object for BuiltinObj {
-    fn get_type(self) -> Type {
+    fn get_type(self: Box<Self>) -> Type {
         Type::Builtin(self.value)
     }
 
@@ -99,7 +119,7 @@ pub struct Error {
 }
 
 impl Object for Error {
-    fn get_type(self) -> Type {
+    fn get_type(self: Box<Self>) -> Type {
         Type::Error(self.msg)
     }
 

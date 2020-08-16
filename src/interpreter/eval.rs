@@ -1,18 +1,23 @@
 use crate::interpreter::ast::{
-    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType,
+    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType, Program,
 };
-use crate::interpreter::object::Type::Builtin;
-use crate::interpreter::object::{
-    BuiltinObj, Env, Error, FloatObj, IntObj, Object, StringObj, Type,
-};
-use std::option::Option::Some;
+
+use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Object, StringObj, Type};
+
+use crate::interpreter::builtin::BUILTINS;
+use std::borrow::Borrow;
 
 pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
     match node.get_type() {
         NodeType::CallExp(call_exp) => eval_call_exp(call_exp, env),
         NodeType::InfixExp(infix_exp) => eval_infix_expr(infix_exp, env),
         NodeType::Ident(ident) => eval_ident(ident, env),
-        NodeType::IntLit(int_lit) => {}
+        NodeType::IntLit(int_lit) => {
+            let int_obj = IntObj {
+                value: int_lit.get_value(),
+            };
+            int_obj.clone_obj()
+        }
     }
 }
 
@@ -23,16 +28,17 @@ fn eval_call_exp(call_exp: Box<CallExpression>, env: &Env) -> Box<dyn Object> {
     }
 
     let args = eval_exprs(call_exp.args, env);
-    if let Some(&arg) = args.get(0) {
+    if let Some(arg) = args.get(0) {
         if arg.is_error() {
-            return arg;
+            return arg.clone_obj();
         }
     }
 
+    let ins = func.inspect();
     if let Type::Builtin(function) = func.get_type() {
         return function(args);
     }
-    new_error(format!("not a function: {:?}", func.get_type()))
+    new_error(format!("not a function: {}", ins))
 }
 
 pub fn new_error(msg: String) -> Box<dyn Object> {
@@ -51,14 +57,14 @@ fn eval_infix_expr(infix_exp: Box<InfixExpression>, env: &Env) -> Box<dyn Object
         return right;
     }
 
+    let left_ins = left.inspect();
+    let right_ins = right.inspect();
     if let (Type::Int(l), Type::Int(r)) = (left.get_type(), right.get_type()) {
         return eval_int_infix_expr(&infix_exp.operator, l, r);
     }
     new_error(format!(
         "unknown operator: {:?} {:?} {:?}",
-        left.get_type(),
-        infix_exp.operator,
-        right.get_type()
+        left_ins, infix_exp.operator, right_ins
     ))
 }
 
@@ -94,130 +100,12 @@ fn eval_exprs(expr: Vec<Box<dyn Expression>>, env: &Env) -> Vec<Box<dyn Object>>
 
 fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
     if let Some(val) = env.get(ident.get_value().as_str()) {
-        let obj: Box<dyn Object> = match val.get_type() {
-            Type::Int(i) => Box::new(IntObj { value: i }),
-            Type::Float(f) => Box::new(FloatObj { value: f }),
-            Type::String(string) => Box::new(StringObj { value: string }),
-            Type::Builtin(func) => Box::new(BuiltinObj { value: func }),
-            Type::Error(string) => Box::new(Error { msg: string }),
-        };
-        return obj;
+        return val.clone_obj();
     }
 
-    if let Some(builtin) = Builtins {}
-    //     if builtin, ok := builtins[node.Value]; ok {
-    //         return builtin
-    // }
-    //
-    //     return newError("identifier not found: " + node.Value)
-    //     }
-    unimplemented!()
-}
+    if let Some(builtin) = BUILTINS.get(ident.get_value().as_str()) {
+        return builtin.clone_obj();
+    }
 
-//
-// func Eval(node ast.Node, env *object.Environment) object.Object {
-// switch node := node.(type) {
-//
-// // Statements
-// case *ast.Program:
-// return evalProgram(node, env)
-//
-// case *ast.BlockStatement:
-// return evalBlockStatement(node, env)
-//
-// case *ast.ExpressionStatement:
-// return Eval(node.Expression, env)
-//
-// case *ast.ReturnStatement:
-// val := Eval(node.ReturnValue, env)
-// if isError(val) {
-// return val
-// }
-// return &object.ReturnValue{Value: val}
-//
-// case *ast.LetStatement:
-// val := Eval(node.Value, env)
-// if isError(val) {
-// return val
-// }
-// env.Set(node.Name.Value, val)
-//
-// // Expressions
-// case *ast.IntegerLiteral:
-// return &object.Integer{Value: node.Value}
-//
-// case *ast.StringLiteral:
-// return &object.String{Value: node.Value}
-//
-// case *ast.Boolean:
-// return nativeBoolToBooleanObject(node.Value)
-//
-// case *ast.PrefixExpression:
-// right := Eval(node.Right, env)
-// if isError(right) {
-// return right
-// }
-// return evalPrefixExpression(node.Operator, right)
-//
-// case *ast.InfixExpression:
-// left := Eval(node.Left, env)
-// if isError(left) {
-// return left
-// }
-//
-// right := Eval(node.Right, env)
-// if isError(right) {
-// return right
-// }
-//
-// return evalInfixExpression(node.Operator, left, right)
-//
-// case *ast.IfExpression:
-// return evalIfExpression(node, env)
-//
-// case *ast.Identifier:
-// return evalIdentifier(node, env)
-//
-// case *ast.FunctionLiteral:
-// params := node.Parameters
-// body := node.Body
-// return &object.Function{Parameters: params, Env: env, Body: body}
-//
-// case *ast.CallExpression:
-// function := Eval(node.Function, env)
-// if isError(function) {
-// return function
-// }
-//
-// args := evalExpressions(node.Arguments, env)
-// if len(args) == 1 && isError(args[0]) {
-// return args[0]
-// }
-//
-// return applyFunction(function, args)
-//
-// case *ast.ArrayLiteral:
-// elements := evalExpressions(node.Elements, env)
-// if len(elements) == 1 && isError(elements[0]) {
-// return elements[0]
-// }
-// return &object.Array{Elements: elements}
-//
-// case *ast.IndexExpression:
-// left := Eval(node.Left, env)
-// if isError(left) {
-// return left
-// }
-// index := Eval(node.Index, env)
-// if isError(index) {
-// return index
-// }
-// return evalIndexExpression(left, index)
-//
-// case *ast.HashLiteral:
-// return evalHashLiteral(node, env)
-//
-// }
-//
-// return nil
-// }
+    new_error(format!("identifier not found: {:?}", ident))
+}

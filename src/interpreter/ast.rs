@@ -1,6 +1,28 @@
 use crate::interpreter::token::Token;
 use std::fmt::{Debug, Write};
 
+pub struct Program {
+    pub(crate) exprs: Vec<Box<dyn Expression>>,
+}
+
+impl Program {
+    fn token_literal(&self) -> String {
+        if let Some(exprs) = self.exprs.get(0) {
+            return exprs.to_string();
+        }
+        "".to_string()
+    }
+
+    fn to_string(&self) -> String {
+        let mut out = String::new();
+
+        for expr in &self.exprs {
+            let _ = out.write_str(&expr.to_string());
+        }
+        out
+    }
+}
+
 // The base Node interface
 pub trait Node {
     fn token_literal(&self) -> String;
@@ -15,10 +37,30 @@ pub enum NodeType {
     Ident(Box<Identifier>),
 }
 
+pub trait CloneNode {
+    fn clone_node(&self) -> Box<dyn Node>;
+}
+
+impl<T> CloneNode for T
+where
+    T: Node + Clone + 'static,
+{
+    fn clone_node(&self) -> Box<dyn Node> {
+        Box::new(self.clone())
+    }
+}
+
+// All statement nodes implement this
+pub trait Statement: Node + CloneNode + Debug {
+    fn statement_node(&self);
+}
+
 // All expression nodes implement this
-pub trait Expression: Node + CloneExp + Debug {
+pub trait Expression: Node + CloneNode + CloneExp + Debug {
     fn expression_node(&self);
-    fn to_node(&self) -> Box<dyn Node>;
+    fn to_node(&self) -> Box<dyn Node> {
+        self.clone_node()
+    }
 }
 
 pub trait CloneExp {
@@ -68,11 +110,6 @@ impl Node for Identifier {
 
 impl Expression for Identifier {
     fn expression_node(&self) {}
-
-    fn to_node(&self) -> Box<dyn Node> {
-        let node: Box<dyn Node> = Box::new(self.clone());
-        node
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -109,11 +146,6 @@ impl Node for CallExpression {
 
 impl Expression for CallExpression {
     fn expression_node(&self) {}
-
-    fn to_node(&self) -> Box<dyn Node> {
-        let node: Box<dyn Node> = Box::new(self.clone());
-        node
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -149,17 +181,18 @@ impl Node for InfixExpression {
 
 impl Expression for InfixExpression {
     fn expression_node(&self) {}
-
-    fn to_node(&self) -> Box<dyn Node> {
-        let node: Box<dyn Node> = Box::new(self.clone());
-        node
-    }
 }
 
 #[derive(Clone, Debug)]
 pub struct IntegerLiteral {
     token: Token,
     value: i32,
+}
+
+impl IntegerLiteral {
+    pub(crate) fn get_value(&self) -> i32 {
+        self.value
+    }
 }
 
 impl Node for IntegerLiteral {
@@ -178,9 +211,4 @@ impl Node for IntegerLiteral {
 
 impl Expression for IntegerLiteral {
     fn expression_node(&self) {}
-
-    fn to_node(&self) -> Box<dyn Node> {
-        let node: Box<dyn Node> = Box::new(self.clone());
-        node
-    }
 }

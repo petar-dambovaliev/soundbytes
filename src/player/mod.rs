@@ -1,7 +1,9 @@
 mod clamp;
 mod effect;
-mod instrument;
+pub mod instrument;
 mod oscillator;
 mod play;
 mod sound;
 mod tempo;
+
+pub struct Song {}

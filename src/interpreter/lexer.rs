@@ -1,4 +1,5 @@
 use crate::interpreter::token::{lookup_ident, Token, TokenType};
+use std::collections::HashMap;
 
 pub struct Lexer {
     input: Vec<char>,
@@ -112,5 +113,23 @@ fn new_token(ttype: TokenType, ch: char) -> Token {
     Token {
         ttype,
         literal: ch.to_string(),
+    }
+}
+
+#[test]
+fn test_next_token() {
+    let input = "tempo(66);";
+    let mut tokens = HashMap::new();
+    tokens.insert(TokenType::Ident, "tempo");
+    tokens.insert(TokenType::Lparen, "(");
+    tokens.insert(TokenType::Int, "66");
+    tokens.insert(TokenType::Rparen, ")");
+
+    let mut lex = Lexer::new(input);
+
+    for token in tokens {
+        let tok = lex.next_token();
+        assert_eq!(token.0, tok.ttype);
+        assert_eq!(token.1, tok.literal);
     }
 }

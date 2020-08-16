@@ -1,4 +1,4 @@
-use crate::interpreter::ast::{CallExpression, Expression, InfixExpression};
+use crate::interpreter::ast::{CallExpression, Expression, InfixExpression, Program};
 use crate::interpreter::lexer::Lexer;
 use crate::interpreter::token::{Token, TokenType};
 use lazy_static::lazy_static;
@@ -41,6 +41,25 @@ impl Parser {
             cur_token: Default::default(),
             peek_token: Default::default(),
         }
+    }
+
+    fn parse_whole_expr(&mut self) -> Option<Box<dyn Expression>> {
+        let expr = self.parse_expression(Precedence::Lowest);
+
+        if self.peek_token_is(TokenType::Semicolon) {
+            self.next_token();
+        }
+        expr
+    }
+
+    pub fn parse_program(&mut self) -> Program {
+        let mut exprs = vec![];
+
+        while !self.cur_token_is(TokenType::Eof) {
+            exprs.push(self.parse_whole_expr().unwrap());
+            self.next_token();
+        }
+        Program { exprs }
     }
 
     fn parse_plus_infix(&mut self, left: Box<dyn Expression>) -> Box<dyn Expression> {
@@ -164,6 +183,9 @@ impl Parser {
 
     fn peek_token_is(&self, token_type: TokenType) -> bool {
         self.peek_token.ttype == token_type
+    }
+    fn cur_token_is(&self, token_type: TokenType) -> bool {
+        self.cur_token.ttype == token_type
     }
     fn peek_precedence(&self) -> Precedence {
         *PRECEDENCES

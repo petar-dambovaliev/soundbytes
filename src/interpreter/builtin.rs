@@ -5,7 +5,7 @@ use lazy_static::lazy_static;
 use std::collections::HashMap;
 
 lazy_static! {
-    static ref BUILTINS: HashMap<String, BuiltinObj> = {
+    pub static ref BUILTINS: HashMap<String, BuiltinObj> = {
         let mut hm = HashMap::new();
         hm.insert(
             "tempo".to_string(),
@@ -20,7 +20,7 @@ lazy_static! {
 
                     let arg = args.first().unwrap();
 
-                    if let Type::Int(i) = arg.get_type() {}
+                    // if let Type::Int(i) = arg.get_type() {}
 
                     unimplemented!()
                 },
