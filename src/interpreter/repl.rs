@@ -1,4 +1,3 @@
-use crate::interpreter::ast::Node;
 use crate::interpreter::eval::eval;
 use crate::interpreter::lexer::Lexer;
 use crate::interpreter::object::Env;
@@ -8,6 +7,7 @@ use std::result::Result::Ok;
 
 const PROMPT: &[u8; 3] = b">> ";
 
+#[allow(dead_code)]
 pub fn start(in_: impl Read, mut out: impl Write + std::fmt::Write) {
     let buf_reader = BufReader::new(in_);
     let env = Env::new();
@@ -22,13 +22,14 @@ pub fn start(in_: impl Read, mut out: impl Write + std::fmt::Write) {
             let program = Box::new(p.parse_program());
             for expr in program.exprs {
                 let evaluated = eval(expr.to_node(), &env);
-                out.write_str(&evaluated.inspect());
-                out.write_char('\n');
+                let _ = out.write_str(&evaluated.inspect());
+                let _ = out.write_char('\n');
             }
         }
     }
 }
 
+#[allow(dead_code)]
 fn print_parser_errors(mut out: impl Write, errors: &[String]) {
     for error in errors {
         if let Err(e) = out.write(error.as_ref()) {

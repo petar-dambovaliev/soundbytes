@@ -13,11 +13,12 @@ pub enum PlayErr {
     BuildStream(BuildStreamError),
     EndOfSong,
 }
-
+#[allow(dead_code)]
 pub struct Player {
     device: Device,
 }
 
+#[allow(dead_code)]
 impl Player {
     pub fn new() -> Self {
         let host = cpal::default_host();

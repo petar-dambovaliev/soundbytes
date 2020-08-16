@@ -1,16 +1,13 @@
 use crate::interpreter::ast::{
-    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType, Program,
+    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType,
 };
-
-use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Object, StringObj, Type};
-
 use crate::interpreter::builtin::BUILTINS;
-use std::borrow::Borrow;
+use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Object, Type};
 
 pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
     match node.get_type() {
-        NodeType::CallExp(call_exp) => eval_call_exp(call_exp, env),
-        NodeType::InfixExp(infix_exp) => eval_infix_expr(infix_exp, env),
+        NodeType::CallExp(call_exp) => eval_call_exp(*call_exp, env),
+        NodeType::InfixExp(infix_exp) => eval_infix_expr(&infix_exp, env),
         NodeType::Ident(ident) => eval_ident(ident, env),
         NodeType::IntLit(int_lit) => {
             let int_obj = IntObj {
@@ -21,7 +18,7 @@ pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
     }
 }
 
-fn eval_call_exp(call_exp: Box<CallExpression>, env: &Env) -> Box<dyn Object> {
+fn eval_call_exp(call_exp: CallExpression, env: &Env) -> Box<dyn Object> {
     let func = eval(call_exp.func.to_node(), env);
     if func.is_error() {
         return func;
@@ -46,13 +43,13 @@ pub fn new_error(msg: String) -> Box<dyn Object> {
     err
 }
 
-fn eval_infix_expr(infix_exp: Box<InfixExpression>, env: &Env) -> Box<dyn Object> {
+fn eval_infix_expr(infix_exp: &InfixExpression, env: &Env) -> Box<dyn Object> {
     let left = eval(infix_exp.left.to_node(), env);
     if left.is_error() {
         return left;
     }
 
-    let right = eval(infix_exp.right.unwrap().to_node(), env);
+    let right = eval(infix_exp.right.as_ref().unwrap().to_node(), env);
     if right.is_error() {
         return right;
     }

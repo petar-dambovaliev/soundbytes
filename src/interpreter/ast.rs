@@ -1,25 +1,28 @@
 use crate::interpreter::token::Token;
-use std::fmt::{Debug, Write};
+use std::fmt::{Debug, Display, Formatter, Result, Write};
 
 pub struct Program {
     pub(crate) exprs: Vec<Box<dyn Expression>>,
 }
 
+impl Display for Program {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result {
+        let mut out = String::new();
+
+        for expr in &self.exprs {
+            let _ = out.write_str(&expr.to_string());
+        }
+        f.write_str(&out)
+    }
+}
+
+#[allow(dead_code)]
 impl Program {
     fn token_literal(&self) -> String {
         if let Some(exprs) = self.exprs.get(0) {
             return exprs.to_string();
         }
         "".to_string()
-    }
-
-    fn to_string(&self) -> String {
-        let mut out = String::new();
-
-        for expr in &self.exprs {
-            let _ = out.write_str(&expr.to_string());
-        }
-        out
     }
 }
 

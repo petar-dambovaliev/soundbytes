@@ -50,6 +50,7 @@ pub struct SampleClock {
     end: f32,
 }
 
+#[allow(dead_code)]
 impl SampleClock {
     pub(crate) fn new() -> Self {
         Self {

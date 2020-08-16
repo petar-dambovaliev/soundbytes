@@ -1,5 +1,4 @@
 use crate::interpreter::token::{lookup_ident, Token, TokenType};
-use std::collections::HashMap;
 
 pub struct Lexer {
     input: Vec<char>,
@@ -10,6 +9,7 @@ pub struct Lexer {
 
 const DEFAULT_CHAR: char = '\x00';
 
+#[allow(dead_code)]
 impl Lexer {
     pub fn new(input: &str) -> Self {
         let chars: Vec<char> = input.chars().collect();
@@ -24,17 +24,21 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Token {
+        self.skip_whitespace();
         let tok;
         match self.ch {
             '+' => tok = new_token(TokenType::Plus, self.ch),
             '*' => tok = new_token(TokenType::Asterisk, self.ch),
+            '(' => tok = new_token(TokenType::Lparen, self.ch),
+            ')' => tok = new_token(TokenType::Rparen, self.ch),
             DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
             _ => {
                 if self.ch.is_alphabetic() {
                     let literal = self.read_ident();
+
                     return Token {
                         ttype: lookup_ident(literal.as_str()),
-                        literal: literal,
+                        literal,
                     };
                 }
                 if self.ch.is_digit(10) {
@@ -119,17 +123,19 @@ fn new_token(ttype: TokenType, ch: char) -> Token {
 #[test]
 fn test_next_token() {
     let input = "tempo(66);";
-    let mut tokens = HashMap::new();
-    tokens.insert(TokenType::Ident, "tempo");
-    tokens.insert(TokenType::Lparen, "(");
-    tokens.insert(TokenType::Int, "66");
-    tokens.insert(TokenType::Rparen, ")");
+    let tokens_type = vec![
+        TokenType::Ident,
+        TokenType::Lparen,
+        TokenType::Int,
+        TokenType::Rparen,
+    ];
+    let tokens_str = vec!["tempo", "(", "66", ")"];
 
     let mut lex = Lexer::new(input);
 
-    for token in tokens {
+    for token in tokens_type.iter().enumerate() {
         let tok = lex.next_token();
-        assert_eq!(token.0, tok.ttype);
-        assert_eq!(token.1, tok.literal);
+        assert_eq!(token.1, &tok.ttype);
+        assert_eq!(tokens_str[token.0], tok.literal);
     }
 }

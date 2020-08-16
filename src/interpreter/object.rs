@@ -1,6 +1,5 @@
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result};
-use std::option::Option::Some;
 
 pub enum Type {
     Int(i32),
@@ -8,6 +7,7 @@ pub enum Type {
     String(String),
     Builtin(DefaultBuiltinFunc),
     Error(String),
+    Null,
 }
 
 impl Debug for Type {
@@ -16,8 +16,9 @@ impl Debug for Type {
             Self::Int(i) => f.write_str(&format!("Int({})", i)),
             Self::Float(i) => f.write_str(&format!("Float({})", i)),
             Self::String(i) => f.write_str(&format!("String({})", i)),
-            Self::Builtin(i) => f.write_str("Builtin()"),
+            Self::Builtin(_) => f.write_str("Builtin()"),
             Self::Error(i) => f.write_str(&format!("Error({})", i)),
+            Self::Null => f.write_str("Null"),
         }
     }
 }
@@ -46,6 +47,19 @@ where
 impl Clone for Box<dyn Object> {
     fn clone(&self) -> Self {
         self.clone_obj()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Null {}
+
+impl Object for Null {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Null
+    }
+
+    fn inspect(&self) -> String {
+        "Null".to_string()
     }
 }
 
@@ -96,7 +110,7 @@ impl Object for StringObj {
 
 pub trait BuiltinFn: Fn(Vec<Box<dyn Object>>) -> Box<dyn Object> + Sync {}
 impl BuiltinFn for fn(Vec<Box<dyn Object>>) -> Box<dyn Object> {}
-type DefaultBuiltinFunc = fn(Vec<Box<dyn Object>>) -> Box<dyn Object>;
+type DefaultBuiltinFunc = fn(Vec<Box<dyn Object + 'static>>) -> Box<dyn Object>;
 
 #[derive(Clone)]
 pub struct BuiltinObj {
@@ -107,7 +121,6 @@ impl Object for BuiltinObj {
     fn get_type(self: Box<Self>) -> Type {
         Type::Builtin(self.value)
     }
-
     fn inspect(&self) -> String {
         "builtin function".to_string()
     }
@@ -122,7 +135,6 @@ impl Object for Error {
     fn get_type(self: Box<Self>) -> Type {
         Type::Error(self.msg)
     }
-
     fn inspect(&self) -> String {
         format!("ERROR: {}", self.msg)
     }
@@ -136,6 +148,7 @@ pub struct Env<'a> {
     outer: Option<&'a Env<'a>>,
 }
 
+#[allow(dead_code)]
 impl<'a> Env<'a> {
     pub fn new_enclosed(outer: &'a Env<'a>) -> Self {
         Self {

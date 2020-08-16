@@ -1,6 +1,7 @@
 use lazy_static::lazy_static;
 use std::collections::HashMap;
 
+#[allow(dead_code)]
 pub fn lookup_ident(ident: &str) -> TokenType {
     *KEYWORDS.get(ident).unwrap_or(&TokenType::Ident)
 }
@@ -12,6 +13,7 @@ pub struct Token {
 }
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Hash)]
+#[allow(dead_code)]
 pub enum TokenType {
     Illegal,
     Eof,
@@ -44,10 +46,10 @@ pub enum TokenType {
     Rbracket,
 
     // Keyword
-    Play,
-    Repeat,
+    //Play,
+    //Repeat,
     If,
-    Tempo,
+    //Tempo,
 }
 
 impl Default for TokenType {
@@ -56,6 +58,7 @@ impl Default for TokenType {
     }
 }
 
+#[allow(dead_code)]
 impl TokenType {
     fn from_str(s: &str) -> Self {
         match s {
@@ -71,10 +74,10 @@ impl TokenType {
             ")" => Self::Rparen,
             "{" => Self::Lbrace,
             "}" => Self::Rbrace,
-            "PLAY" => Self::Play,
-            "REPEAT" => Self::Repeat,
+            //"PLAY" => Self::Play,
+            //"REPEAT" => Self::Repeat,
             "IF" => Self::If,
-            "TEMPO" => Self::Tempo,
+            //"TEMPO" => Self::Tempo,
             _ => Self::Illegal,
         }
     }
@@ -82,10 +85,9 @@ impl TokenType {
 
 lazy_static! {
     static ref KEYWORDS: HashMap<String, TokenType> = {
-        let mut hp = HashMap::new();
-        hp.insert("play".to_string(), TokenType::Play);
-        hp.insert("repeat".to_string(), TokenType::Repeat);
-        hp.insert("tempo".to_string(), TokenType::Tempo);
-        hp
+        HashMap::new()
+        // hp.insert("play".to_string(), TokenType::Play);
+        // hp.insert("repeat".to_string(), TokenType::Repeat);
+        // hp.insert("tempo".to_string(), TokenType::Tempo);
     };
 }

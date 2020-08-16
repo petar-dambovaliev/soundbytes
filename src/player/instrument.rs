@@ -38,6 +38,7 @@ pub struct Synth {
     opts: Options,
 }
 
+#[allow(dead_code)]
 impl Synth {
     pub fn new(opts: Options, score: VecDeque<Sound>) -> Self {
         Self {

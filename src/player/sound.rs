@@ -14,6 +14,7 @@ pub struct Envelope {
     trigger_on_time: f32,
 }
 
+#[allow(dead_code)]
 impl Envelope {
     pub fn new() -> Self {
         Self {

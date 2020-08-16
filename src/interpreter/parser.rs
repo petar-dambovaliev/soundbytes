@@ -155,8 +155,7 @@ impl Parser {
             format!(
                 "expected next token to be {:?}, got {:?} instead",
                 token_type, self.peek_token.ttype
-            )
-            .to_string(),
+            ),
         ))
     }
 
