@@ -31,6 +31,7 @@ impl Lexer {
             '*' => tok = new_token(TokenType::Asterisk, self.ch),
             '(' => tok = new_token(TokenType::Lparen, self.ch),
             ')' => tok = new_token(TokenType::Rparen, self.ch),
+            ';' => tok = new_token(TokenType::Semicolon, self.ch),
             DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
             _ => {
                 if self.ch.is_alphabetic() {
@@ -122,20 +123,25 @@ fn new_token(ttype: TokenType, ch: char) -> Token {
 
 #[test]
 fn test_next_token() {
-    let input = "tempo(66);";
-    let tokens_type = vec![
+    let input = "tempo(66);1+2;";
+    let tokens_type: [TokenType; 9] = [
         TokenType::Ident,
         TokenType::Lparen,
         TokenType::Int,
         TokenType::Rparen,
+        TokenType::Semicolon,
+        TokenType::Int,
+        TokenType::Plus,
+        TokenType::Int,
+        TokenType::Semicolon,
     ];
-    let tokens_str = vec!["tempo", "(", "66", ")"];
+    let tokens_str: [&str; 9] = ["tempo", "(", "66", ")", ";", "1", "+", "2", ";"];
 
     let mut lex = Lexer::new(input);
 
-    for token in tokens_type.iter().enumerate() {
+    for (key, token) in tokens_type.iter().enumerate() {
         let tok = lex.next_token();
-        assert_eq!(token.1, &tok.ttype);
-        assert_eq!(tokens_str[token.0], tok.literal);
+        assert_eq!(token, &tok.ttype);
+        assert_eq!(tokens_str[key], tok.literal);
     }
 }
