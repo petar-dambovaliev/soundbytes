@@ -1,10 +1,10 @@
 use crate::interpreter::token::{lookup_ident, Token, TokenType};
 
 pub struct Lexer {
-    input: Vec<char>,
+    pub input: Vec<char>,
     position: usize,      // current position in input (points to current char)
     read_position: usize, // current reading position in input (after current char)
-    ch: char,             // current char under examination
+    pub(crate) ch: char,  // current char under examination
 }
 
 const DEFAULT_CHAR: char = '\x00';
@@ -26,12 +26,15 @@ impl Lexer {
     pub fn next_token(&mut self) -> Token {
         self.skip_whitespace();
         let tok;
+
         match self.ch {
             '+' => tok = new_token(TokenType::Plus, self.ch),
             '*' => tok = new_token(TokenType::Asterisk, self.ch),
             '(' => tok = new_token(TokenType::Lparen, self.ch),
             ')' => tok = new_token(TokenType::Rparen, self.ch),
             ';' => tok = new_token(TokenType::Semicolon, self.ch),
+            '/' => tok = new_token(TokenType::Semicolon, self.ch),
+            '-' => tok = new_token(TokenType::Minus, self.ch),
             DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
             _ => {
                 if self.ch.is_alphabetic() {
@@ -109,6 +112,7 @@ impl Lexer {
             Some(&c) => c,
             None => DEFAULT_CHAR,
         };
+
         self.position = self.read_position;
         self.read_position += 1;
     }
@@ -144,4 +148,29 @@ fn test_next_token() {
         assert_eq!(token, &tok.ttype);
         assert_eq!(tokens_str[key], tok.literal);
     }
+}
+
+#[test]
+fn test_next_token_int() {
+    let input = "2 * 2";
+    //let res = vec![TokenType::Int, TokenType::Plus, TokenType::Int];
+    let mut lex = Lexer::new(input);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    let tok = lex.next_token();
+    println!("tok {:?}", tok);
+    // assert_eq!(&TokenType::Int, &tok.ttype);
+    // assert_eq!("5", tok.literal);
 }

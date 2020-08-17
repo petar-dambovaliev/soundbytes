@@ -29,6 +29,8 @@ pub enum TokenType {
     // Operators
     Plus,
     Asterisk,
+    Slash,
+    Minus,
 
     Eq,
     NotEq,
@@ -74,6 +76,8 @@ impl TokenType {
             ")" => Self::Rparen,
             "{" => Self::Lbrace,
             "}" => Self::Rbrace,
+            "/" => Self::Slash,
+            "-" => Self::Minus,
             //"PLAY" => Self::Play,
             //"REPEAT" => Self::Repeat,
             "IF" => Self::If,

@@ -1,5 +1,5 @@
 use crate::interpreter::ast::{
-    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType,
+    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType, PrefixExpression,
 };
 use crate::interpreter::builtin::BUILTINS;
 use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Object, Type};
@@ -15,6 +15,32 @@ pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
             };
             int_obj.clone_obj()
         }
+        NodeType::PrefixExpr(prefix_expr) => eval_prefix_expr(*prefix_expr, env),
+    }
+}
+
+fn eval_prefix_expr(prefix_exp: PrefixExpression, env: &Env) -> Box<dyn Object> {
+    let right = eval(prefix_exp.right.to_node(), env);
+
+    if right.is_error() {
+        return right;
+    }
+
+    match prefix_exp.operator.as_str() {
+        "-" => eval_minus_prefix(right),
+        _ => new_error(format!(
+            "unknown operator: {}{:?}",
+            prefix_exp.operator,
+            right.get_type()
+        )),
+    }
+}
+
+fn eval_minus_prefix(right: Box<dyn Object>) -> Box<dyn Object> {
+    let t = right.get_type();
+    match t {
+        Type::Int(i) => Box::new(IntObj { value: -i }),
+        _ => new_error(format!("unknown operator: -{:?}", t)),
     }
 }
 
@@ -73,7 +99,7 @@ fn eval_int_infix_expr(op: &str, left: i32, right: i32) -> Box<dyn Object> {
         "*" => left * right,
         _ => {
             return new_error(format!(
-                "unknown operator: op - {}  left - {}  right - {}",
+                "unknown operator: op: '{}'  left: '{}'  right: '{}'",
                 op, left, right
             ))
         }
@@ -105,4 +131,33 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
     }
 
     new_error(format!("identifier not found: {:?}", ident))
+}
+
+#[cfg(test)]
+use crate::interpreter::lexer::Lexer;
+#[cfg(test)]
+use crate::interpreter::parser::Parser;
+
+#[test]
+fn test_eval_int_expr() {
+    let tests = vec![
+        ("5", 5),
+        ("10", 10),
+        ("-5", -5),
+        ("5 + 5 - 10 + 5", 5),
+        ("2 * 2", 4),
+        ("10/5", 2),
+    ];
+
+    for (expr, res) in tests {
+        let lex = Lexer::new(expr);
+        let mut p = Parser::new(lex);
+        let program = p.parse_program();
+
+        for exp in program.exprs {
+            let env = Env::new();
+            let evaluated = eval(exp.to_node(), &env);
+            println!("evaluated {:?}", evaluated);
+        }
+    }
 }

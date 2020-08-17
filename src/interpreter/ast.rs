@@ -38,6 +38,7 @@ pub enum NodeType {
     InfixExp(Box<InfixExpression>),
     IntLit(Box<IntegerLiteral>),
     Ident(Box<Identifier>),
+    PrefixExpr(Box<PrefixExpression>),
 }
 
 pub trait CloneNode {
@@ -188,8 +189,8 @@ impl Expression for InfixExpression {
 
 #[derive(Clone, Debug)]
 pub struct IntegerLiteral {
-    token: Token,
-    value: i32,
+    pub(crate) token: Token,
+    pub(crate) value: i32,
 }
 
 impl IntegerLiteral {
@@ -214,4 +215,36 @@ impl Node for IntegerLiteral {
 
 impl Expression for IntegerLiteral {
     fn expression_node(&self) {}
+}
+
+#[derive(Debug, Clone)]
+pub struct PrefixExpression {
+    pub(crate) token: Token, // The prefix token, e.g. !
+    pub(crate) operator: String,
+    pub(crate) right: Box<dyn Expression>,
+}
+
+impl Expression for PrefixExpression {
+    fn expression_node(&self) {}
+}
+
+impl Node for PrefixExpression {
+    fn token_literal(&self) -> String {
+        self.token.literal.to_string()
+    }
+
+    fn to_string(&self) -> String {
+        let mut out = String::new();
+
+        out.write_char('(');
+        out.write_str(&self.operator);
+        out.write_str(&self.right.to_string());
+        out.write_char(')');
+
+        out
+    }
+
+    fn get_type(self: Box<Self>) -> NodeType {
+        NodeType::PrefixExpr(self)
+    }
 }

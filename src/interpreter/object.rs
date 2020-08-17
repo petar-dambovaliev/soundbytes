@@ -23,7 +23,7 @@ impl Debug for Type {
     }
 }
 
-pub trait Object: CloneObj {
+pub trait Object: CloneObj + Debug {
     fn get_type(self: Box<Self>) -> Type;
     fn inspect(&self) -> String;
     fn is_error(&self) -> bool {
@@ -112,7 +112,7 @@ pub trait BuiltinFn: Fn(Vec<Box<dyn Object>>) -> Box<dyn Object> + Sync {}
 impl BuiltinFn for fn(Vec<Box<dyn Object>>) -> Box<dyn Object> {}
 type DefaultBuiltinFunc = fn(Vec<Box<dyn Object + 'static>>) -> Box<dyn Object>;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct BuiltinObj {
     pub(crate) value: DefaultBuiltinFunc,
 }

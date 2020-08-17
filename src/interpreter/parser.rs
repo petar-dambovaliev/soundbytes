@@ -1,14 +1,19 @@
-use crate::interpreter::ast::{CallExpression, Expression, InfixExpression, Program};
+use crate::interpreter::ast::NodeType::IntLit;
+use crate::interpreter::ast::{
+    CallExpression, Expression, InfixExpression, IntegerLiteral, PrefixExpression, Program,
+};
 use crate::interpreter::lexer::Lexer;
 use crate::interpreter::token::{Token, TokenType};
 use lazy_static::lazy_static;
 use std::collections::HashMap;
+use std::num::ParseIntError;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 enum Precedence {
     Lowest = 1,
     Sum,  // +
     Call, // myFunction(X)
+    Prefix,
 }
 
 lazy_static! {
@@ -20,10 +25,12 @@ lazy_static! {
     };
 }
 
+#[derive(Debug)]
 pub enum ParseErr {
     NoPrefix(Token),
     NoInfix(Token),
     Peek(TokenType, String),
+    IntConv(ParseIntError),
 }
 
 pub struct Parser {
@@ -35,12 +42,20 @@ pub struct Parser {
 
 impl Parser {
     pub fn new(lex: Lexer) -> Self {
-        Self {
+        let mut parser = Self {
             lex,
             errors: vec![],
             cur_token: Default::default(),
             peek_token: Default::default(),
-        }
+        };
+        //read first two tokens so cur_token and peek_token are set
+        parser.next_token();
+        parser.next_token();
+        parser
+    }
+
+    pub fn get_errors(&self) -> &Vec<ParseErr> {
+        &self.errors
     }
 
     fn parse_whole_expr(&mut self) -> Option<Box<dyn Expression>> {
@@ -56,7 +71,9 @@ impl Parser {
         let mut exprs = vec![];
 
         while !self.cur_token_is(TokenType::Eof) {
-            exprs.push(self.parse_whole_expr().unwrap());
+            if let Some(e) = self.parse_whole_expr() {
+                exprs.push(e);
+            }
             self.next_token();
         }
         Program { exprs }
@@ -127,10 +144,38 @@ impl Parser {
     fn prefix(&mut self, token_type: TokenType) -> Option<Box<dyn Expression>> {
         match token_type {
             TokenType::Lparen => self.parse_grouped_expr(),
-            TokenType::Int => None,
-            TokenType::Ident => None,
-            _ => None,
+            TokenType::Int => self.parse_int_lit(),
+            TokenType::Ident => unimplemented!("token: {:?}", self.cur_token),
+            TokenType::Minus => self.parse_prefix_expr(),
+            //TokenType::Asterisk => self.infix(token_type, )
+            _ => unimplemented!("token: {:?}", self.cur_token),
         }
+    }
+
+    fn parse_prefix_expr(&mut self) -> Option<Box<dyn Expression>> {
+        let cur_token = self.cur_token.clone();
+        self.next_token();
+
+        let right = self.parse_expression(Precedence::Prefix)?;
+        Some(Box::new(PrefixExpression {
+            token: cur_token.clone(),
+            operator: cur_token.literal,
+            right,
+        }))
+    }
+
+    fn parse_int_lit(&mut self) -> Option<Box<dyn Expression>> {
+        let value: i32 = match self.cur_token.literal.parse() {
+            Ok(i) => i,
+            Err(e) => {
+                self.errors.push(ParseErr::IntConv(e));
+                return None;
+            }
+        };
+        Some(Box::new(IntegerLiteral {
+            token: self.cur_token.clone(),
+            value,
+        }))
     }
 
     fn parse_grouped_expr(&mut self) -> Option<Box<dyn Expression>> {
