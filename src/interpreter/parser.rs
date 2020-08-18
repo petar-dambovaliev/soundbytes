@@ -151,7 +151,7 @@ impl Parser {
             TokenType::Lparen => self.parse_grouped_expr(),
             TokenType::Int => self.parse_int_lit(),
             TokenType::Minus | TokenType::Asterisk => self.parse_prefix_expr(),
-            _ => unimplemented!("token: {:?}", self.cur_token),
+            _ => unimplemented!("prefix {:?}", self.cur_token),
         }
     }
 

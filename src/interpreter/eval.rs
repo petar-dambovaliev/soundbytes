@@ -165,3 +165,17 @@ fn test_eval_int_expr() {
         }
     }
 }
+
+#[test]
+#[should_panic(expected = "not implemented: prefix Token { ttype: Illegal, literal: \".\" }")]
+fn test_eval_float_not_implemented_expr() {
+    let expr = "5.5";
+
+    let lex = Lexer::new(expr);
+    let mut p = Parser::new(lex);
+    let program = p.parse_program();
+    for exp in program.exprs {
+        let env = Env::new();
+        let _ = eval(exp.to_node(), &env);
+    }
+}
