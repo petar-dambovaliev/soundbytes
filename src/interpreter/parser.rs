@@ -1,4 +1,3 @@
-use crate::interpreter::ast::NodeType::IntLit;
 use crate::interpreter::ast::{
     CallExpression, Expression, InfixExpression, IntegerLiteral, PrefixExpression, Program,
 };
@@ -11,15 +10,19 @@ use std::num::ParseIntError;
 #[derive(Eq, PartialEq, Ord, PartialOrd, Copy, Clone)]
 enum Precedence {
     Lowest = 1,
-    Sum,  // +
-    Call, // myFunction(X)
+    Sum, // +
+    Product,
     Prefix,
+    Call, // myFunction(X)
 }
 
 lazy_static! {
     static ref PRECEDENCES: HashMap<TokenType, Precedence> = {
         let mut hm = HashMap::new();
         hm.insert(TokenType::Plus, Precedence::Sum);
+        hm.insert(TokenType::Minus, Precedence::Sum);
+        hm.insert(TokenType::Slash, Precedence::Product);
+        hm.insert(TokenType::Asterisk, Precedence::Product);
         hm.insert(TokenType::Lparen, Precedence::Call);
         hm
     };
@@ -54,6 +57,7 @@ impl Parser {
         parser
     }
 
+    #[allow(dead_code)]
     pub fn get_errors(&self) -> &Vec<ParseErr> {
         &self.errors
     }
@@ -81,12 +85,13 @@ impl Parser {
 
     fn parse_plus_infix(&mut self, left: Box<dyn Expression>) -> Box<dyn Expression> {
         let precedence = self.cur_precedence();
+        let tok = self.cur_token.clone();
         self.next_token();
 
         Box::new(InfixExpression {
-            token: self.cur_token.clone(),
+            token: tok.clone(),
             left,
-            operator: self.cur_token.literal.to_string(),
+            operator: tok.literal,
             right: self.parse_expression(precedence),
         })
     }
@@ -132,12 +137,12 @@ impl Parser {
         expr: Box<dyn Expression>,
     ) -> Option<Box<dyn Expression>> {
         match token_type {
-            TokenType::Plus => {
+            TokenType::Plus | TokenType::Minus | TokenType::Asterisk | TokenType::Slash => {
                 self.next_token();
                 Some(self.parse_plus_infix(expr))
             }
             TokenType::Lparen => Some(self.parse_call_exp(expr)),
-            _ => None,
+            _ => unimplemented!("{:?}", token_type),
         }
     }
 
@@ -145,9 +150,7 @@ impl Parser {
         match token_type {
             TokenType::Lparen => self.parse_grouped_expr(),
             TokenType::Int => self.parse_int_lit(),
-            TokenType::Ident => unimplemented!("token: {:?}", self.cur_token),
-            TokenType::Minus => self.parse_prefix_expr(),
-            //TokenType::Asterisk => self.infix(token_type, )
+            TokenType::Minus | TokenType::Asterisk => self.parse_prefix_expr(),
             _ => unimplemented!("token: {:?}", self.cur_token),
         }
     }

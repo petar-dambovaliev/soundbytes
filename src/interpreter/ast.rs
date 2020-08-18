@@ -27,7 +27,7 @@ impl Program {
 }
 
 // The base Node interface
-pub trait Node {
+pub trait Node: Debug {
     fn token_literal(&self) -> String;
     fn to_string(&self) -> String;
     fn get_type(self: Box<Self>) -> NodeType;
@@ -236,10 +236,10 @@ impl Node for PrefixExpression {
     fn to_string(&self) -> String {
         let mut out = String::new();
 
-        out.write_char('(');
-        out.write_str(&self.operator);
-        out.write_str(&self.right.to_string());
-        out.write_char(')');
+        let _ = out.write_char('(');
+        let _ = out.write_str(&self.operator);
+        let _ = out.write_str(&self.right.to_string());
+        let _ = out.write_char(')');
 
         out
     }

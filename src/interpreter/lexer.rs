@@ -33,7 +33,7 @@ impl Lexer {
             '(' => tok = new_token(TokenType::Lparen, self.ch),
             ')' => tok = new_token(TokenType::Rparen, self.ch),
             ';' => tok = new_token(TokenType::Semicolon, self.ch),
-            '/' => tok = new_token(TokenType::Semicolon, self.ch),
+            '/' => tok = new_token(TokenType::Slash, self.ch),
             '-' => tok = new_token(TokenType::Minus, self.ch),
             DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
             _ => {
@@ -148,29 +148,4 @@ fn test_next_token() {
         assert_eq!(token, &tok.ttype);
         assert_eq!(tokens_str[key], tok.literal);
     }
-}
-
-#[test]
-fn test_next_token_int() {
-    let input = "2 * 2";
-    //let res = vec![TokenType::Int, TokenType::Plus, TokenType::Int];
-    let mut lex = Lexer::new(input);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    let tok = lex.next_token();
-    println!("tok {:?}", tok);
-    // assert_eq!(&TokenType::Int, &tok.ttype);
-    // assert_eq!("5", tok.literal);
 }

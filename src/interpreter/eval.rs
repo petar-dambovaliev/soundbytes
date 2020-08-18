@@ -7,7 +7,7 @@ use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Object, Type};
 pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
     match node.get_type() {
         NodeType::CallExp(call_exp) => eval_call_exp(*call_exp, env),
-        NodeType::InfixExp(infix_exp) => eval_infix_expr(&infix_exp, env),
+        NodeType::InfixExp(infix_exp) => eval_infix_expr(*infix_exp, env),
         NodeType::Ident(ident) => eval_ident(ident, env),
         NodeType::IntLit(int_lit) => {
             let int_obj = IntObj {
@@ -29,7 +29,7 @@ fn eval_prefix_expr(prefix_exp: PrefixExpression, env: &Env) -> Box<dyn Object> 
     match prefix_exp.operator.as_str() {
         "-" => eval_minus_prefix(right),
         _ => new_error(format!(
-            "unknown operator: {}{:?}",
+            "unknown operator: '{}' {:?}",
             prefix_exp.operator,
             right.get_type()
         )),
@@ -69,7 +69,7 @@ pub fn new_error(msg: String) -> Box<dyn Object> {
     err
 }
 
-fn eval_infix_expr(infix_exp: &InfixExpression, env: &Env) -> Box<dyn Object> {
+fn eval_infix_expr(infix_exp: InfixExpression, env: &Env) -> Box<dyn Object> {
     let left = eval(infix_exp.left.to_node(), env);
     if left.is_error() {
         return left;
@@ -82,6 +82,7 @@ fn eval_infix_expr(infix_exp: &InfixExpression, env: &Env) -> Box<dyn Object> {
 
     let left_ins = left.inspect();
     let right_ins = right.inspect();
+
     if let (Type::Int(l), Type::Int(r)) = (left.get_type(), right.get_type()) {
         return eval_int_infix_expr(&infix_exp.operator, l, r);
     }
@@ -153,11 +154,14 @@ fn test_eval_int_expr() {
         let lex = Lexer::new(expr);
         let mut p = Parser::new(lex);
         let program = p.parse_program();
-
         for exp in program.exprs {
             let env = Env::new();
             let evaluated = eval(exp.to_node(), &env);
-            println!("evaluated {:?}", evaluated);
+            let t = evaluated.get_type();
+            match &t {
+                Type::Int(i) => assert_eq!(&res, i),
+                _ => panic!("expected Int, got {:?}", t),
+            }
         }
     }
 }
