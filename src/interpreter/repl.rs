@@ -3,7 +3,6 @@ use crate::interpreter::lexer::Lexer;
 use crate::interpreter::object::Env;
 use crate::interpreter::parser::Parser;
 use std::io::{BufRead, BufReader, Read, Write};
-use std::result::Result::Ok;
 
 const PROMPT: &[u8; 3] = b">> ";
 
