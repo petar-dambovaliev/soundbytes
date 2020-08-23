@@ -87,11 +87,15 @@ impl Lexer {
     fn read_ident(&mut self) -> String {
         let position = self.position;
 
-        while self.ch.is_alphabetic() {
+        while self.ch.is_alphabetic() || self.is_ident_char() {
             self.read_char()
         }
 
         self.input[position..self.position].iter().collect()
+    }
+
+    fn is_ident_char(&self) -> bool {
+        self.ch == '#'
     }
 
     fn peek_char(&mut self) -> char {
@@ -127,8 +131,8 @@ fn new_token(ttype: TokenType, ch: char) -> Token {
 
 #[test]
 fn test_next_token() {
-    let input = "tempo(66);1+2;";
-    let tokens_type: [TokenType; 9] = [
+    let input = "tempo(66);1+2;play(c#);";
+    let tokens_type: [TokenType; 14] = [
         TokenType::Ident,
         TokenType::Lparen,
         TokenType::Int,
@@ -138,13 +142,21 @@ fn test_next_token() {
         TokenType::Plus,
         TokenType::Int,
         TokenType::Semicolon,
+        TokenType::Ident,
+        TokenType::Lparen,
+        TokenType::Ident,
+        TokenType::Rparen,
+        TokenType::Semicolon,
     ];
-    let tokens_str: [&str; 9] = ["tempo", "(", "66", ")", ";", "1", "+", "2", ";"];
+    let tokens_str: [&str; 14] = [
+        "tempo", "(", "66", ")", ";", "1", "+", "2", ";", "play", "(", "c#", ")", ";",
+    ];
 
     let mut lex = Lexer::new(input);
 
     for (key, token) in tokens_type.iter().enumerate() {
         let tok = lex.next_token();
+        //println!("token {:?}", tok);
         assert_eq!(token, &tok.ttype);
         assert_eq!(tokens_str[key], tok.literal);
     }

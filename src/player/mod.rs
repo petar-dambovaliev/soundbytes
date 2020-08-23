@@ -1,8 +1,8 @@
 mod clamp;
 mod effect;
 pub mod instrument;
-mod oscillator;
+pub(crate) mod oscillator;
 mod play;
-mod song;
-mod sound;
-mod tempo;
+pub(crate) mod song;
+pub(crate) mod sound;
+pub(crate) mod tempo;

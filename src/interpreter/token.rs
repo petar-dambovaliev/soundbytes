@@ -51,7 +51,6 @@ pub enum TokenType {
     //Play,
     //Repeat,
     If,
-    //Tempo,
 }
 
 impl Default for TokenType {

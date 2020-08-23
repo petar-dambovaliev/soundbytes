@@ -3,8 +3,27 @@ use std::fmt::Debug;
 
 pub type EffectBox = Box<dyn Effect>;
 
-pub trait Effect: Debug + Send {
+pub trait Effect: Debug + Send + CloneEffect + 'static {
     fn get_frequency(&self, sample_clock: &SampleClock) -> f32;
+}
+
+pub trait CloneEffect {
+    fn clone_effect(&self) -> EffectBox;
+}
+
+impl<T> CloneEffect for T
+where
+    T: Effect + Clone + 'static,
+{
+    fn clone_effect(&self) -> EffectBox {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for EffectBox {
+    fn clone(&self) -> Self {
+        self.clone_effect()
+    }
 }
 
 #[derive(Debug, Clone)]

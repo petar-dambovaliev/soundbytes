@@ -1,9 +1,11 @@
+use crate::player::instrument::{InstrumentBox, Instruments};
 use crate::player::tempo::{Tempo, TempoErr};
 
 pub struct Song {
     pub start_tempo: i32,
     pub tempo_changes: Vec<Tempo>,
     tempo_cum: i32,
+    instruments: Instruments,
 }
 
 impl Song {
@@ -12,8 +14,14 @@ impl Song {
             start_tempo: 0,
             tempo_changes: vec![],
             tempo_cum: 0,
+            instruments: vec![],
         }
     }
+
+    pub fn push_instrument(&mut self, i: InstrumentBox) {
+        self.instruments.push(i)
+    }
+
     pub fn push_tempo(&mut self, tempo: Tempo) -> Result<(), TempoErr> {
         if tempo.value == 0 {
             return Err(self.err_tempo(tempo.value));

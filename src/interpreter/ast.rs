@@ -88,8 +88,8 @@ impl Clone for Box<dyn Expression> {
 
 #[derive(Clone, Debug)]
 pub struct Identifier {
-    token: Token, // the token.IDENT token
-    value: String,
+    pub(crate) token: Token, // the token.IDENT token
+    pub(crate) value: String,
 }
 
 impl Identifier {

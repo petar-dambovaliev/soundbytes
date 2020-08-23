@@ -56,18 +56,29 @@ impl Envelope {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Frequency {
     pub frequency: f32,
     pub effects: Option<Vec<EffectBox>>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Sound {
     pub(crate) note: Note,
     pub(crate) octave: Octave,
     pub(crate) duration: Duration,
     pub(crate) effects: Option<Vec<EffectBox>>,
+}
+
+impl Sound {
+    pub fn new(note: Note, octave: Octave, duration: Duration) -> Self {
+        Self {
+            note,
+            octave,
+            duration,
+            effects: None,
+        }
+    }
 }
 
 impl Note {

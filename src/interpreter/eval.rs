@@ -2,7 +2,11 @@ use crate::interpreter::ast::{
     CallExpression, Expression, Identifier, InfixExpression, Node, NodeType, PrefixExpression,
 };
 use crate::interpreter::builtin::BUILTINS;
-use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Object, Type};
+use crate::interpreter::object::{
+    CloneObj, Duration, Env, Error, IntObj, Note, Object, Octave, Sound, Type,
+};
+use crate::player::sound::{Note as PNote, Sound as PSound};
+use crate::player::tempo::Duration as PDuration;
 
 pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
     match node.get_type() {
@@ -122,6 +126,75 @@ fn eval_exprs(expr: Vec<Box<dyn Expression>>, env: &Env) -> Vec<Box<dyn Object>>
     objs
 }
 
+fn eval_note_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
+    let ident_val = ident.get_value();
+    let mut spl = ident_val.split("_");
+    let (mut n, mut oct, mut dur): (Option<Note>, Option<Octave>, Option<Duration>) =
+        (None, None, None);
+
+    if let Some(note) = spl.next() {
+        let n_eval = eval_ident(
+            Box::new(Identifier {
+                token: Token {
+                    ttype: TokenType::Ident,
+                    literal: note.to_string(),
+                },
+                value: note.to_string(),
+            }),
+            env,
+        );
+
+        match n_eval.get_type() {
+            Type::Note(note) => n = Some(note),
+            _ => return new_error("invalid note".to_string()),
+        }
+    }
+
+    if let Some(o) = spl.next() {
+        let oct_eval = eval_ident(
+            Box::new(Identifier {
+                token: Token {
+                    ttype: TokenType::Ident,
+                    literal: format!("o{}", o).to_string(),
+                },
+                value: format!("o{}", o).to_string(),
+            }),
+            env,
+        );
+
+        match oct_eval.get_type() {
+            Type::Octave(o) => oct = Some(o),
+            _ => return new_error("invalid note arg 2 octave".to_string()),
+        }
+    }
+
+    if let Some(d) = spl.next() {
+        let dur_eval = eval_ident(
+            Box::new(Identifier {
+                token: Token {
+                    ttype: TokenType::Ident,
+                    literal: format!("d{}", d).to_string(),
+                },
+                value: format!("d{}", d).to_string(),
+            }),
+            env,
+        );
+        match dur_eval.get_type() {
+            Type::Duration(d) => dur = Some(d),
+            _ => return new_error("invalid note arg 3 duration".to_string()),
+        }
+    }
+
+    Box::new(Sound {
+        sound: PSound {
+            note: n.unwrap().get_note(),
+            octave: oct.unwrap().get_oct(),
+            duration: dur.unwrap().get_dur(),
+            effects: None,
+        },
+    })
+}
+
 fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
     if let Some(val) = env.get(ident.get_value().as_str()) {
         return val.clone_obj();
@@ -131,6 +204,10 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
         return builtin.clone_obj();
     }
 
+    if ident.get_value().contains("_") {
+        return eval_note_ident(ident, env);
+    }
+
     new_error(format!("identifier not found: {:?}", ident))
 }
 
@@ -138,6 +215,8 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
 use crate::interpreter::lexer::Lexer;
 #[cfg(test)]
 use crate::interpreter::parser::Parser;
+use crate::interpreter::token::{Token, TokenType};
+use std::collections::VecDeque;
 
 #[test]
 fn test_eval_int_expr() {

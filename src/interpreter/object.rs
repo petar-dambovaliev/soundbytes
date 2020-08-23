@@ -1,3 +1,5 @@
+use crate::player::sound::{Note as PNote, Octave as POctave, Sound as PSound};
+use crate::player::tempo::Duration as PDuration;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result};
 
@@ -6,7 +8,12 @@ pub enum Type {
     Float(f32),
     String(String),
     Builtin(DefaultBuiltinFunc),
+    TimeSignature(TimeSignature),
     Error(String),
+    Sound(Sound),
+    Note(Note),
+    Octave(Octave),
+    Duration(Duration),
     Null,
 }
 
@@ -17,7 +24,12 @@ impl Debug for Type {
             Self::Float(i) => f.write_str(&format!("Float({})", i)),
             Self::String(i) => f.write_str(&format!("String({})", i)),
             Self::Builtin(_) => f.write_str("Builtin()"),
+            Self::TimeSignature(ts) => f.write_str(&format!("TimeSignature({}/{})", ts.n, ts.dur)),
             Self::Error(i) => f.write_str(&format!("Error({})", i)),
+            Self::Sound(n) => f.write_str(&format!("{}", n.inspect())),
+            Self::Note(n) => f.write_str(&format!("{}", n.inspect())),
+            Self::Octave(n) => f.write_str(&format!("{}", n.inspect())),
+            Self::Duration(n) => f.write_str(&format!("{}", n.inspect())),
             Self::Null => f.write_str("Null"),
         }
     }
@@ -47,6 +59,118 @@ where
 impl Clone for Box<dyn Object> {
     fn clone(&self) -> Self {
         self.clone_obj()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Duration {
+    dur: PDuration,
+}
+
+impl Duration {
+    pub fn new(dur: PDuration) -> Self {
+        Self { dur }
+    }
+    pub fn get_dur(&self) -> PDuration {
+        self.dur.clone()
+    }
+}
+
+impl Object for Duration {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Duration(*self)
+    }
+
+    fn inspect(&self) -> String {
+        format!("Note: {:?}", self.dur).to_string()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Octave {
+    octave: POctave,
+}
+
+impl Octave {
+    pub fn new(octave: POctave) -> Self {
+        Self { octave }
+    }
+    pub fn get_oct(&self) -> POctave {
+        self.octave.clone()
+    }
+}
+
+impl Object for Octave {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Octave(*self)
+    }
+
+    fn inspect(&self) -> String {
+        format!("Note: {:?}", self.octave).to_string()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Note {
+    note: PNote,
+}
+
+impl Note {
+    pub fn new(note: PNote) -> Self {
+        Self { note }
+    }
+    pub fn get_note(&self) -> PNote {
+        self.note.clone()
+    }
+}
+
+impl Object for Note {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Note(*self)
+    }
+
+    fn inspect(&self) -> String {
+        format!("Note: {:?}", self.note).to_string()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Sound {
+    pub(crate) sound: PSound,
+}
+
+impl Sound {
+    pub fn new(sound: PSound) -> Self {
+        Self { sound }
+    }
+    pub fn get_sound(self) -> PSound {
+        self.sound
+    }
+}
+
+impl Object for Sound {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Sound(*self)
+    }
+
+    fn inspect(&self) -> String {
+        format!("Note: {:?}", self.sound).to_string()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TimeSignature {
+    n: u32,
+    dur: u32,
+}
+
+impl Object for TimeSignature {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::TimeSignature(*self)
+    }
+
+    fn inspect(&self) -> String {
+        "TimeSignature".to_string()
     }
 }
 
@@ -143,17 +267,16 @@ impl Object for Error {
     }
 }
 
-pub struct Env<'a> {
-    store: HashMap<String, &'a dyn Object>,
-    outer: Option<&'a Env<'a>>,
+pub struct Env {
+    store: HashMap<String, Box<dyn Object>>,
+    outer: Option<Box<Env>>,
 }
 
-#[allow(dead_code)]
-impl<'a> Env<'a> {
-    pub fn new_enclosed(outer: &'a Env<'a>) -> Self {
+impl Env {
+    pub fn new_enclosed(outer: Env) -> Self {
         Self {
             store: Default::default(),
-            outer: Some(outer),
+            outer: Some(Box::new(outer)),
         }
     }
     pub fn new() -> Self {
@@ -163,19 +286,19 @@ impl<'a> Env<'a> {
         }
     }
 
-    pub fn get(&self, name: &str) -> Option<&dyn Object> {
-        if let Some(&s) = self.store.get(name) {
-            return Some(s);
+    pub fn get(&self, name: &str) -> Option<Box<dyn Object>> {
+        if let Some(s) = self.store.get(name) {
+            return Some(s.clone());
         }
-        if let Some(outer) = self.outer {
-            if let Some(&outer_res) = outer.store.get(name) {
-                return Some(outer_res);
+        if let Some(outer) = &self.outer {
+            if let Some(outer_res) = outer.store.get(name) {
+                return Some(outer_res.clone());
             }
         }
         None
     }
 
-    pub fn set(&mut self, name: String, obj: &'a dyn Object) {
+    pub fn set(&mut self, name: String, obj: Box<dyn Object>) {
         self.store.insert(name, obj);
     }
 }
