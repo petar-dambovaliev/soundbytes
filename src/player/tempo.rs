@@ -3,16 +3,16 @@ const SEC_PER_MIN: f32 = 60.0;
 #[derive(Debug)]
 pub enum TempoErr {
     InvalidOp {
-        left: i32,
-        right: i32,
+        left: u32,
+        right: u32,
         op: String,
         msg: String,
     },
 }
 
 pub struct Tempo {
-    pub value: i32,
-    pub from_beat: i32,
+    pub value: u32,
+    pub from_beat: u32,
 }
 
 pub struct Rates<'a> {

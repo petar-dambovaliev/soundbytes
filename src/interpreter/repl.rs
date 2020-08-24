@@ -1,6 +1,6 @@
 use crate::interpreter::eval::eval;
 use crate::interpreter::lexer::Lexer;
-use crate::interpreter::object::{CloneObj, Duration, Env, Note, Object, Octave};
+use crate::interpreter::object::{Duration, Env, Note, Octave};
 use crate::interpreter::parser::Parser;
 use crate::player::sound::{Note as PNote, Octave as POctave};
 use crate::player::tempo::Duration as PDUration;

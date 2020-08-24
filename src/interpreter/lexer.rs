@@ -95,7 +95,7 @@ impl Lexer {
     }
 
     fn is_ident_char(&self) -> bool {
-        self.ch == '#'
+        self.ch == '#' || self.ch == '*' || self.ch == '_' || self.ch.is_digit(10)
     }
 
     fn peek_char(&mut self) -> char {
@@ -131,8 +131,8 @@ fn new_token(ttype: TokenType, ch: char) -> Token {
 
 #[test]
 fn test_next_token() {
-    let input = "tempo(66);1+2;play(c#);";
-    let tokens_type: [TokenType; 14] = [
+    let input = "tempo(66);1+2;play(c#);play(c#_1_4);";
+    let tokens_type: [TokenType; 19] = [
         TokenType::Ident,
         TokenType::Lparen,
         TokenType::Int,
@@ -147,9 +147,15 @@ fn test_next_token() {
         TokenType::Ident,
         TokenType::Rparen,
         TokenType::Semicolon,
+        TokenType::Ident,
+        TokenType::Lparen,
+        TokenType::Ident,
+        TokenType::Rparen,
+        TokenType::Semicolon,
     ];
-    let tokens_str: [&str; 14] = [
-        "tempo", "(", "66", ")", ";", "1", "+", "2", ";", "play", "(", "c#", ")", ";",
+    let tokens_str: [&str; 19] = [
+        "tempo", "(", "66", ")", ";", "1", "+", "2", ";", "play", "(", "c#", ")", ";", "play", "(",
+        "c#_1_4", ")", ";",
     ];
 
     let mut lex = Lexer::new(input);

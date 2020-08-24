@@ -3,23 +3,23 @@ use crate::interpreter::object::{BuiltinObj, Object};
 use crate::interpreter::object::{Null, Type};
 use crate::player::instrument::{InstrumentBox, Options, Synth};
 use crate::player::oscillator::AnalogSaw;
+use crate::player::play::{PlayErr, Player};
 use crate::player::song::Song;
 use crate::player::sound::Envelope;
-use crate::player::tempo::Tempo;
 use lazy_static::lazy_static;
+use log::{error, info, warn};
 use std::collections::{HashMap, VecDeque};
 use std::sync::Mutex;
 
 fn new_opts() -> Options {
-    let opts = Options {
+    Options {
         osc: Box::new(AnalogSaw::new()),
         env: Envelope::new(),
-    };
-    opts
+    }
 }
 
 lazy_static! {
-    pub static ref SONG: Mutex<Song> = Mutex::new(Song::new());
+    pub static ref TEMPO: Mutex<u32> = Mutex::new(0);
     pub static ref BUILTINS: HashMap<String, BuiltinObj> = {
         let mut hm = HashMap::new();
         hm.insert(
@@ -36,16 +36,11 @@ lazy_static! {
                     let arg: Box<dyn Object> = args.pop().unwrap();
 
                     if let Type::Int(tempo) = arg.get_type() {
-                        let mut song = match SONG.lock() {
+                        let mut song_tempo = match TEMPO.lock() {
                             Ok(s) => s,
                             Err(_) => panic!("cannot get song"),
                         };
-                        if let Err(e) = song.push_tempo(Tempo {
-                            value: tempo,
-                            from_beat: 0,
-                        }) {
-                            panic!("{:?}", e);
-                        }
+                        *song_tempo  = tempo as u32;
                         return Box::new(Null {});
                     }
                     //todo return an error
@@ -58,7 +53,7 @@ lazy_static! {
             "play".to_string(),
             BuiltinObj {
                 value: |args: Vec<Box<dyn Object + 'static>>| -> Box<dyn Object> {
-                    if args.len() == 0 {
+                    if args.is_empty() {
                         return new_error(
                             "zero arguments given to play. what am i supposed to play, huh?"
                                 .to_string(),
@@ -76,14 +71,33 @@ lazy_static! {
                         }
                         return new_error(format!("expected note, argument {} is {}", i, info))
                     }
-
-                    let mut song = match SONG.lock() {
+                    let song_tempo = match TEMPO.lock() {
                             Ok(s) => s,
                             Err(_) => panic!("cannot get song"),
-                    };
+                        };
+                    let mut song = Song::new(*song_tempo);
 
                     let instr: InstrumentBox = Box::new(Synth::new(new_opts(), sounds));
                     song.push_instrument(instr);
+                    let player = Player::new();
+                    let err_recv = player.spawn(song).unwrap();
+
+                   'outer: loop {
+                        let res = err_recv.recv();
+                        if let Ok(e) = res {
+                            match e {
+                                PlayErr::StreamErr(stream_err) => warn!("err: {:?}", stream_err),
+                                PlayErr::BuildStream(build_err) => error!("err: {:?}", build_err),
+                                PlayErr::EndOfSong => {
+                                    info!("finished playing all instruments");
+                                    break 'outer;
+                                }
+                            }
+                        } else if let Err(e) = res {
+                            warn!("could not receive the end {}", e);
+                            break 'outer;
+                        }
+                    }
                     //todo return an error
                     Box::new(Null {})
                 },

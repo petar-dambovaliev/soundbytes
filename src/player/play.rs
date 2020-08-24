@@ -1,5 +1,5 @@
 use crate::player::clamp::Clamp;
-use crate::player::instrument::Instruments;
+use crate::player::song::Song;
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use cpal::{BuildStreamError, DefaultStreamConfigError, Device, PlayStreamError};
 use crossbeam_channel::{unbounded, Receiver};
@@ -29,14 +29,12 @@ impl Player {
         Self { device }
     }
 
-    pub fn spawn(
-        self,
-        mut instruments: Instruments,
-        tempo: f32,
-    ) -> Result<Receiver<PlayErr>, DefaultStreamConfigError> {
-        assert!(tempo > 0.0);
+    pub fn spawn(self, mut song: Song) -> Result<Receiver<PlayErr>, DefaultStreamConfigError> {
+        assert!(song.start_tempo > 0);
         let (end_send, end_recv) = unbounded();
         let config = self.device.default_output_config()?;
+        let tempo = song.start_tempo as f32;
+        let mut instruments = song.instruments;
 
         thread::spawn(move || {
             let finished = Arc::new(AtomicUsize::new(0));

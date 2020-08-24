@@ -126,70 +126,77 @@ fn eval_exprs(expr: Vec<Box<dyn Expression>>, env: &Env) -> Vec<Box<dyn Object>>
     objs
 }
 
-fn eval_note_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
+fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
     let ident_val = ident.get_value();
-    let mut spl = ident_val.split("_");
-    let (mut n, mut oct, mut dur): (Option<Note>, Option<Octave>, Option<Duration>) =
-        (None, None, None);
+    let mut spl = ident_val.split('_');
 
-    if let Some(note) = spl.next() {
-        let n_eval = eval_ident(
-            Box::new(Identifier {
-                token: Token {
-                    ttype: TokenType::Ident,
-                    literal: note.to_string(),
-                },
-                value: note.to_string(),
-            }),
-            env,
-        );
+    let n = match spl.next() {
+        Some(note) => {
+            let n_eval = eval_ident(
+                Box::new(Identifier {
+                    token: Token {
+                        ttype: TokenType::Ident,
+                        literal: note.to_string(),
+                    },
+                    value: note.to_string(),
+                }),
+                env,
+            );
 
-        match n_eval.get_type() {
-            Type::Note(note) => n = Some(note),
-            _ => return new_error("invalid note".to_string()),
+            match n_eval.get_type() {
+                Type::Note(note) => note,
+                _ => return new_error("invalid note".to_string()),
+            }
         }
-    }
+        _ => return new_error("invalid note".to_string()),
+    };
 
-    if let Some(o) = spl.next() {
-        let oct_eval = eval_ident(
-            Box::new(Identifier {
-                token: Token {
-                    ttype: TokenType::Ident,
-                    literal: format!("o{}", o).to_string(),
-                },
-                value: format!("o{}", o).to_string(),
-            }),
-            env,
-        );
+    let oct = match spl.next() {
+        Some(o) => {
+            let oct_eval = eval_ident(
+                Box::new(Identifier {
+                    token: Token {
+                        ttype: TokenType::Ident,
+                        literal: format!("o{}", o),
+                    },
+                    value: format!("o{}", o),
+                }),
+                env,
+            );
 
-        match oct_eval.get_type() {
-            Type::Octave(o) => oct = Some(o),
-            _ => return new_error("invalid note arg 2 octave".to_string()),
+            match oct_eval.get_type() {
+                Type::Octave(o) => o,
+                _ => return new_error("invalid note arg 2 octave".to_string()),
+            }
         }
-    }
+        _ => return new_error("invalid note arg 2 octave".to_string()),
+    };
 
-    if let Some(d) = spl.next() {
-        let dur_eval = eval_ident(
-            Box::new(Identifier {
-                token: Token {
-                    ttype: TokenType::Ident,
-                    literal: format!("d{}", d).to_string(),
-                },
-                value: format!("d{}", d).to_string(),
-            }),
-            env,
-        );
-        match dur_eval.get_type() {
-            Type::Duration(d) => dur = Some(d),
-            _ => return new_error("invalid note arg 3 duration".to_string()),
+    let dur = match spl.next() {
+        Some(d) => {
+            let dur_eval = eval_ident(
+                Box::new(Identifier {
+                    token: Token {
+                        ttype: TokenType::Ident,
+                        literal: format!("d{}", d),
+                    },
+                    value: format!("d{}", d),
+                }),
+                env,
+            );
+            match dur_eval.get_type() {
+                Type::Duration(d) => d,
+                _ => return new_error("invalid note arg 3 duration".to_string()),
+            }
         }
-    }
+        _ => return new_error("invalid note arg 3 duration".to_string()),
+    };
 
     Box::new(Sound {
         sound: PSound {
-            note: n.unwrap().get_note(),
-            octave: oct.unwrap().get_oct(),
-            duration: dur.unwrap().get_dur(),
+            note: n.get_note(),
+            octave: oct.get_oct(),
+            duration: dur.get_dur(),
             effects: None,
         },
     })
@@ -204,8 +211,8 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
         return builtin.clone_obj();
     }
 
-    if ident.get_value().contains("_") {
-        return eval_note_ident(ident, env);
+    if ident.get_value().contains('_') {
+        return eval_note_ident(*ident, env);
     }
 
     new_error(format!("identifier not found: {:?}", ident))
@@ -256,5 +263,22 @@ fn test_eval_float_not_implemented_expr() {
     for exp in program.exprs {
         let env = Env::new();
         let _ = eval(exp.to_node(), &env);
+    }
+}
+
+#[test]
+fn test_eval_play() {
+    let tests = vec![("play(c#_4_4);", 5)];
+
+    for (expr, res) in tests {
+        let lex = Lexer::new(expr);
+        let mut p = Parser::new(lex);
+        let program = p.parse_program();
+        for exp in program.exprs {
+            let env = Env::new();
+            let evaluated = eval(exp.to_node(), &env);
+            let t = evaluated.get_type();
+            println!("{:?}", t);
+        }
     }
 }

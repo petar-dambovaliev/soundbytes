@@ -26,10 +26,10 @@ impl Debug for Type {
             Self::Builtin(_) => f.write_str("Builtin()"),
             Self::TimeSignature(ts) => f.write_str(&format!("TimeSignature({}/{})", ts.n, ts.dur)),
             Self::Error(i) => f.write_str(&format!("Error({})", i)),
-            Self::Sound(n) => f.write_str(&format!("{}", n.inspect())),
-            Self::Note(n) => f.write_str(&format!("{}", n.inspect())),
-            Self::Octave(n) => f.write_str(&format!("{}", n.inspect())),
-            Self::Duration(n) => f.write_str(&format!("{}", n.inspect())),
+            Self::Sound(n) => f.write_str(&n.inspect()),
+            Self::Note(n) => f.write_str(&n.inspect()),
+            Self::Octave(n) => f.write_str(&n.inspect()),
+            Self::Duration(n) => f.write_str(&n.inspect()),
             Self::Null => f.write_str("Null"),
         }
     }
@@ -82,7 +82,7 @@ impl Object for Duration {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.dur).to_string()
+        format!("Note: {:?}", self.dur)
     }
 }
 
@@ -106,7 +106,7 @@ impl Object for Octave {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.octave).to_string()
+        format!("Note: {:?}", self.octave)
     }
 }
 
@@ -130,7 +130,7 @@ impl Object for Note {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.note).to_string()
+        format!("Note: {:?}", self.note)
     }
 }
 
@@ -154,7 +154,7 @@ impl Object for Sound {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.sound).to_string()
+        format!("Note: {:?}", self.sound)
     }
 }
 
@@ -272,6 +272,7 @@ pub struct Env {
     outer: Option<Box<Env>>,
 }
 
+#[allow(dead_code)]
 impl Env {
     pub fn new_enclosed(outer: Env) -> Self {
         Self {
