@@ -167,3 +167,25 @@ fn test_next_token() {
         assert_eq!(tokens_str[key], tok.literal);
     }
 }
+
+#[test]
+fn test_next_token_play() {
+    let input = "play(c#_1_4);";
+    let tokens_type: [TokenType; 5] = [
+        TokenType::Ident,
+        TokenType::Lparen,
+        TokenType::Ident,
+        TokenType::Rparen,
+        TokenType::Semicolon,
+    ];
+    let tokens_str: [&str; 5] = ["play", "(", "c#_1_4", ")", ";"];
+
+    let mut lex = Lexer::new(input);
+
+    for (key, token) in tokens_type.iter().enumerate() {
+        let tok = lex.next_token();
+        println!("token {:?}", tok);
+        assert_eq!(token, &tok.ttype);
+        assert_eq!(tokens_str[key], tok.literal);
+    }
+}

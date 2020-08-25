@@ -8,6 +8,7 @@ pub struct Song {
     pub instruments: Instruments,
 }
 
+#[allow(dead_code)]
 impl Song {
     pub fn new(tempo: u32) -> Self {
         Self {
@@ -31,7 +32,7 @@ impl Song {
             self.tempo_cum = tempo.value;
             return Ok(());
         }
-        if self.tempo_cum + tempo.value <= 0 {
+        if self.tempo_cum + tempo.value == 0 {
             return Err(self.err_tempo(tempo.value));
         }
         self.tempo_cum += tempo.value;

@@ -1,5 +1,7 @@
+use crate::interpreter::ast::NodeType;
 use crate::interpreter::ast::{
-    CallExpression, Expression, InfixExpression, IntegerLiteral, PrefixExpression, Program,
+    CallExpression, Expression, Identifier, InfixExpression, IntegerLiteral, PrefixExpression,
+    Program,
 };
 use crate::interpreter::lexer::Lexer;
 use crate::interpreter::token::{Token, TokenType};
@@ -97,11 +99,9 @@ impl Parser {
     }
 
     fn parse_call_exp(&mut self, func: Box<dyn Expression>) -> Box<dyn Expression> {
-        Box::new(CallExpression {
-            token: self.cur_token.clone(),
-            func,
-            args: self.parse_expr_list(TokenType::Rparen),
-        })
+        let token = self.cur_token.clone();
+        let args = self.parse_expr_list(TokenType::Rparen);
+        Box::new(CallExpression { token, func, args })
     }
 
     fn parse_expr_list(&mut self, end: TokenType) -> Vec<Box<dyn Expression>> {
@@ -141,7 +141,10 @@ impl Parser {
                 self.next_token();
                 Some(self.parse_plus_infix(expr))
             }
-            TokenType::Lparen => Some(self.parse_call_exp(expr)),
+            TokenType::Lparen => {
+                self.next_token();
+                Some(self.parse_call_exp(expr))
+            }
             _ => unimplemented!("{:?}", token_type),
         }
     }
@@ -151,8 +154,18 @@ impl Parser {
             TokenType::Lparen => self.parse_grouped_expr(),
             TokenType::Int => self.parse_int_lit(),
             TokenType::Minus | TokenType::Asterisk => self.parse_prefix_expr(),
+            TokenType::Ident => Some(self.parse_ident()),
             _ => unimplemented!("prefix {:?}", self.cur_token),
         }
+    }
+
+    fn parse_ident(&self) -> Box<dyn Expression> {
+        let tok = self.cur_token.clone();
+        let lit = tok.literal.to_string();
+        Box::new(Identifier {
+            token: tok,
+            value: lit,
+        })
     }
 
     fn parse_prefix_expr(&mut self) -> Option<Box<dyn Expression>> {
@@ -250,4 +263,27 @@ impl Parser {
         self.cur_token = self.peek_token.clone();
         self.peek_token = self.lex.next_token();
     }
+}
+
+#[test]
+fn test_call_expression_parsing() {
+    let input = "play(c#_1_4*);";
+
+    let lex = Lexer::new(input);
+    let mut p = Parser::new(lex);
+    let prog = p.parse_program();
+    assert_eq!(1, prog.exprs.len());
+    let expr = prog.exprs.first().unwrap();
+
+    if let NodeType::CallExp(ce) = expr.clone().get_type() {
+        assert_eq!(1, ce.args.len());
+        let arg = ce.args.first().unwrap();
+
+        if let NodeType::Ident(ident) = arg.clone().get_type() {
+            assert_eq!("c#_1_4*", ident.value);
+            return;
+        }
+        panic!("expected ident arg got {:?}", arg);
+    }
+    panic!("expected call expression got {:?}", expr);
 }

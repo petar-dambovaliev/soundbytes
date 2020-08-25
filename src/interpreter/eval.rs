@@ -268,9 +268,9 @@ fn test_eval_float_not_implemented_expr() {
 
 #[test]
 fn test_eval_play() {
-    let tests = vec![("play(c#_4_4);", 5)];
+    let tests = vec!["play(c#_4_4);"];
 
-    for (expr, res) in tests {
+    for expr in tests {
         let lex = Lexer::new(expr);
         let mut p = Parser::new(lex);
         let program = p.parse_program();
