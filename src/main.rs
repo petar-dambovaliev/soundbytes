@@ -6,55 +6,36 @@ extern crate crossbeam_channel;
 extern crate env_logger;
 extern crate lazy_static;
 extern crate log;
+extern crate relative_path;
 
-// use crate::oscillator::AnalogSaw;
-// use crate::play::PlayErr;
-// use crate::player::instrument::{InstrumentBox, Instruments, Options, Synth};
-// use crate::sound::{Envelope, Note, Octave, Sound};
-// use crate::tempo::Duration;
-// use cpal::DefaultStreamConfigError;
-// use log::{error, info, warn};
-// use play::Player;
-// use std::collections::VecDeque;
+use interpreter::repl;
+use relative_path::RelativePath;
+use std::env;
+use std::fs::File;
+use std::io::{stdin, stdout, Read};
 
 fn main() {
-    // -> Result<(), DefaultStreamConfigError> {
-    //std::env::set_var("RUST_LOG", "soundbytes=info");
-    // env_logger::init();
-    //
-    // let synth_lead: InstrumentBox = Box::new(Synth::new(new_opts(), bach_lead()));
-    // let synth_bass: InstrumentBox = Box::new(Synth::new(new_opts(), bach_bass()));
-    // let synth_bass2: InstrumentBox = Box::new(Synth::new(new_opts(), bach_bass2()));
-    // let instruments: Instruments = vec![synth_bass2, synth_lead, synth_bass];
-    //
-    // let player = Player::new();
-    // let err_recv = player.spawn(instruments, 30.0)?;
-    //
-    // loop {
-    //     let res = err_recv.recv();
-    //     if let Ok(e) = res {
-    //         match e {
-    //             PlayErr::StreamErr(stream_err) => warn!("err: {:?}", stream_err),
-    //             PlayErr::BuildStream(build_err) => error!("err: {:?}", build_err),
-    //             PlayErr::EndOfSong => {
-    //                 info!("finished playing all instruments");
-    //                 return Ok(());
-    //             }
-    //         }
-    //     } else if let Err(e) = res {
-    //         warn!("could not receive the end {}", e);
-    //         return Ok(());
-    //     }
-    // }
+    env::set_var("RUST_LOG", "soundbytes=info");
+    env_logger::init();
+    let args: Vec<String> = env::args().collect();
+    let mut f = None;
+    if let Some(s) = args.get(1) {
+        let path = RelativePath::new(s);
+        let display = path.to_string();
+
+        let file = match File::open(path.to_path(".")) {
+            Err(why) => panic!("couldn't open {}: {}", display, why),
+            Ok(file) => file,
+        };
+        f = Some(file)
+    }
+
+    let in_: Box<dyn Read> = match f {
+        Some(i) => Box::new(i),
+        None => Box::new(stdin()),
+    };
+    repl::start(in_, stdout());
 }
-//
-// fn new_opts() -> Options {
-//     let opts = Options {
-//         osc: Box::new(AnalogSaw::new()),
-//         env: Envelope::new(),
-//     };
-//     opts
-// }
 //
 // fn bach_bass2() -> VecDeque<Sound> {
 //     let sounds = vec![

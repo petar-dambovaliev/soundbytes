@@ -4,5 +4,5 @@ mod eval;
 mod lexer;
 mod object;
 mod parser;
-mod repl;
+pub mod repl;
 mod token;

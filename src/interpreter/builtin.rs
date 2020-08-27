@@ -36,6 +36,9 @@ lazy_static! {
                     let arg: Box<dyn Object> = args.pop().unwrap();
 
                     if let Type::Int(tempo) = arg.get_type() {
+                        if tempo <= 0 {
+                            return new_error("tempo should be higher than 0".to_string());
+                        }
                         let mut song_tempo = match TEMPO.lock() {
                             Ok(s) => s,
                             Err(_) => panic!("cannot get song"),

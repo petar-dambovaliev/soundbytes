@@ -29,7 +29,7 @@ impl Player {
         Self { device }
     }
 
-    pub fn spawn(self, mut song: Song) -> Result<Receiver<PlayErr>, DefaultStreamConfigError> {
+    pub fn spawn(self, song: Song) -> Result<Receiver<PlayErr>, DefaultStreamConfigError> {
         assert!(song.start_tempo > 0);
         let (end_send, end_recv) = unbounded();
         let config = self.device.default_output_config()?;

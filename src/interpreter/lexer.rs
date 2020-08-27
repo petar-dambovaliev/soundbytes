@@ -35,6 +35,7 @@ impl Lexer {
             ';' => tok = new_token(TokenType::Semicolon, self.ch),
             '/' => tok = new_token(TokenType::Slash, self.ch),
             '-' => tok = new_token(TokenType::Minus, self.ch),
+            ',' => tok = new_token(TokenType::Comma, self.ch),
             DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
             _ => {
                 if self.ch.is_alphabetic() {
@@ -170,7 +171,7 @@ fn test_next_token() {
 
 #[test]
 fn test_next_token_play() {
-    let input = "play(c#_1_4);";
+    let input = "play(c#_1_4, );";
     let tokens_type: [TokenType; 5] = [
         TokenType::Ident,
         TokenType::Lparen,

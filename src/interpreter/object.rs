@@ -267,6 +267,7 @@ impl Object for Error {
     }
 }
 
+#[derive(Debug)]
 pub struct Env {
     store: HashMap<String, Box<dyn Object>>,
     outer: Option<Box<Env>>,

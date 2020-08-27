@@ -9,7 +9,7 @@ use std::io::{BufRead, BufReader, Read, Write};
 const PROMPT: &[u8; 3] = b">> ";
 
 #[allow(dead_code)]
-pub fn start(in_: impl Read, mut out: impl Write + std::fmt::Write) {
+pub fn start(in_: impl Read, mut out: impl Write) {
     let buf_reader = BufReader::new(in_);
     let mut env = Env::new();
     inject_predeclared(&mut env);
@@ -24,8 +24,8 @@ pub fn start(in_: impl Read, mut out: impl Write + std::fmt::Write) {
             let program = Box::new(p.parse_program());
             for expr in program.exprs {
                 let evaluated = eval(expr.to_node(), &env);
-                let _ = out.write_str(&evaluated.inspect());
-                let _ = out.write_char('\n');
+                let _ = out.write(evaluated.inspect().as_bytes());
+                let _ = out.write(b"\n");
             }
         }
     }
@@ -35,6 +35,8 @@ fn inject_predeclared(env: &mut Env) {
     let mut inject_note = |n: PNote, k: &str| {
         env.set(k.to_string(), Box::new(Note::new(n)));
     };
+
+    inject_note(PNote::Space, "x");
     inject_note(PNote::A, "a");
     inject_note(PNote::ASharp, "a#");
     inject_note(PNote::B, "b");

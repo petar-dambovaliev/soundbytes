@@ -143,15 +143,21 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
                 env,
             );
 
+            let ins = n_eval.inspect();
             match n_eval.get_type() {
                 Type::Note(note) => note,
-                _ => return new_error("invalid note".to_string()),
+                _ => return new_error(ins),
             }
         }
-        _ => return new_error("invalid note".to_string()),
+        _ => return new_error("missing note argument".to_string()),
     };
 
-    let oct = match spl.next() {
+    let oct_ = match n.get_note() {
+        PNote::Space => Some("4"),
+        _ => spl.next(),
+    };
+
+    let oct = match oct_ {
         Some(o) => {
             let oct_eval = eval_ident(
                 Box::new(Identifier {
@@ -184,12 +190,13 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
                 }),
                 env,
             );
+            let ins = dur_eval.inspect();
             match dur_eval.get_type() {
                 Type::Duration(d) => d,
-                _ => return new_error("invalid note arg 3 duration".to_string()),
+                _ => return new_error(format!("invalid note duration `{:?}`", ins)),
             }
         }
-        _ => return new_error("invalid note arg 3 duration".to_string()),
+        _ => return new_error("missing note duration".to_string()),
     };
 
     Box::new(Sound {
@@ -215,7 +222,7 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
         return eval_note_ident(*ident, env);
     }
 
-    new_error(format!("identifier not found: {:?}", ident))
+    new_error(format!("not found: `{}`", ident.to_string()))
 }
 
 #[cfg(test)]
@@ -263,22 +270,5 @@ fn test_eval_float_not_implemented_expr() {
     for exp in program.exprs {
         let env = Env::new();
         let _ = eval(exp.to_node(), &env);
-    }
-}
-
-#[test]
-fn test_eval_play() {
-    let tests = vec!["play(c#_4_4);"];
-
-    for expr in tests {
-        let lex = Lexer::new(expr);
-        let mut p = Parser::new(lex);
-        let program = p.parse_program();
-        for exp in program.exprs {
-            let env = Env::new();
-            let evaluated = eval(exp.to_node(), &env);
-            let t = evaluated.get_type();
-            println!("{:?}", t);
-        }
     }
 }

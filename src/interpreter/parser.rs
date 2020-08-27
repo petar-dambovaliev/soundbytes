@@ -267,7 +267,7 @@ impl Parser {
 
 #[test]
 fn test_call_expression_parsing() {
-    let input = "play(c#_1_4*);";
+    let input = "play(c#_1_4*, c#_4_4);";
 
     let lex = Lexer::new(input);
     let mut p = Parser::new(lex);
@@ -276,11 +276,18 @@ fn test_call_expression_parsing() {
     let expr = prog.exprs.first().unwrap();
 
     if let NodeType::CallExp(ce) = expr.clone().get_type() {
-        assert_eq!(1, ce.args.len());
-        let arg = ce.args.first().unwrap();
+        assert_eq!(2, ce.args.len());
+        let mut arg_iter = ce.args.iter();
+        let arg = arg_iter.next().unwrap();
 
         if let NodeType::Ident(ident) = arg.clone().get_type() {
             assert_eq!("c#_1_4*", ident.value);
+        }
+
+        let arg = arg_iter.next().unwrap();
+
+        if let NodeType::Ident(ident) = arg.clone().get_type() {
+            assert_eq!("c#_4_4", ident.value);
             return;
         }
         panic!("expected ident arg got {:?}", arg);
