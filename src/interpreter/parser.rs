@@ -294,3 +294,21 @@ fn test_call_expression_parsing() {
     }
     panic!("expected call expression got {:?}", expr);
 }
+
+#[test]
+fn test_skip_comments() {
+    let input = "
+//make multiline work
+// set first octave and duration as defaults
+// make multiple tracks playable simultaneously
+// write intellij plugin
+// imeplement + operator for notes
+
+
+play(a_5_32,
+a_4_32);";
+    let mut lex = Lexer::new(input);
+    let mut p = Parser::new(lex);
+    let prog = p.parse_program();
+    println!("{}", prog.to_string())
+}

@@ -10,24 +10,23 @@ const PROMPT: &[u8; 3] = b">> ";
 
 #[allow(dead_code)]
 pub fn start(in_: impl Read, mut out: impl Write) {
-    let buf_reader = BufReader::new(in_);
+    let mut buf_reader = BufReader::new(in_);
     let mut env = Env::new();
     inject_predeclared(&mut env);
 
-    for line in buf_reader.lines() {
-        if let Ok(text) = line {
-            let _ = out.write(PROMPT);
+    let mut input = String::new();
+    let _ = buf_reader.read_to_string(&mut input);
 
-            let lex = Lexer::new(text.as_str());
-            let mut p = Parser::new(lex);
+    let _ = out.write(PROMPT);
 
-            let program = Box::new(p.parse_program());
-            for expr in program.exprs {
-                let evaluated = eval(expr.to_node(), &env);
-                let _ = out.write(evaluated.inspect().as_bytes());
-                let _ = out.write(b"\n");
-            }
-        }
+    let lex = Lexer::new(&input);
+    let mut p = Parser::new(lex);
+
+    let program = Box::new(p.parse_program());
+    for expr in program.exprs {
+        let evaluated = eval(expr.to_node(), &env);
+        let _ = out.write(evaluated.inspect().as_bytes());
+        let _ = out.write(b"\n");
     }
 }
 

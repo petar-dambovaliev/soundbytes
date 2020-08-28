@@ -24,7 +24,9 @@ impl Lexer {
     }
 
     pub fn next_token(&mut self) -> Token {
-        self.skip_whitespace();
+        self.skip_all_whitespace();
+        self.skip_comments();
+        self.skip_all_whitespace();
         let tok;
 
         match self.ch {
@@ -106,9 +108,19 @@ impl Lexer {
         }
     }
 
-    fn skip_whitespace(&mut self) {
-        if self.ch.is_whitespace() {
-            self.read_char()
+    fn skip_comments(&mut self) {
+        if self.ch == '/' && self.peek_char() == '/' {
+            while self.ch != '\n' && self.ch != DEFAULT_CHAR {
+                self.read_char();
+            }
+            self.skip_all_whitespace();
+            self.skip_comments();
+        }
+    }
+
+    fn skip_all_whitespace(&mut self) {
+        while self.ch.is_whitespace() {
+            self.read_char();
         }
     }
 
@@ -171,7 +183,7 @@ fn test_next_token() {
 
 #[test]
 fn test_next_token_play() {
-    let input = "play(c#_1_4, );";
+    let input = "play(c#_1_4);";
     let tokens_type: [TokenType; 5] = [
         TokenType::Ident,
         TokenType::Lparen,
@@ -189,4 +201,66 @@ fn test_next_token_play() {
         assert_eq!(token, &tok.ttype);
         assert_eq!(tokens_str[key], tok.literal);
     }
+}
+
+#[test]
+fn test_multiline_expression() {
+    let input = "play(c#_1_4,\n c#_1_4);";
+    let tokens_type: [TokenType; 7] = [
+        TokenType::Ident,
+        TokenType::Lparen,
+        TokenType::Ident,
+        TokenType::Comma,
+        TokenType::Ident,
+        TokenType::Rparen,
+        TokenType::Semicolon,
+    ];
+    let tokens_str: [&str; 7] = ["play", "(", "c#_1_4", ",", "c#_1_4", ")", ";"];
+
+    let mut lex = Lexer::new(input);
+
+    for (key, token) in tokens_type.iter().enumerate() {
+        let tok = lex.next_token();
+        assert_eq!(token, &tok.ttype);
+        assert_eq!(tokens_str[key], tok.literal);
+    }
+}
+
+#[test]
+fn test_skip_comments() {
+    let input = "
+tempo(40);
+
+//make multiline work
+// set first octave and duration as defaults
+// make multiple tracks playable simultaneously
+// write intellij plugin
+// imeplement + operator for notes
+
+
+
+play(a_5_32,
+a_4_32);";
+    let mut lex = Lexer::new(input);
+
+    let tok = lex.next_token();
+    assert_eq!(TokenType::Ident, tok.ttype);
+    assert_eq!("tempo", tok.literal);
+
+    let tok = lex.next_token();
+    assert_eq!(TokenType::Lparen, tok.ttype);
+
+    let tok = lex.next_token();
+    assert_eq!(TokenType::Int, tok.ttype);
+    assert_eq!("40", tok.literal);
+
+    let tok = lex.next_token();
+    assert_eq!(TokenType::Rparen, tok.ttype);
+
+    let tok = lex.next_token();
+    assert_eq!(TokenType::Semicolon, tok.ttype);
+
+    let tok = lex.next_token();
+    assert_eq!(TokenType::Ident, tok.ttype);
+    assert_eq!("play", tok.literal);
 }
