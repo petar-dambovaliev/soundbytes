@@ -39,6 +39,7 @@ pub enum NodeType {
     IntLit(Box<IntegerLiteral>),
     Ident(Box<Identifier>),
     PrefixExpr(Box<PrefixExpression>),
+    AssignStmt(Box<AssignStatement>),
 }
 
 pub trait CloneNode {
@@ -54,9 +55,37 @@ where
     }
 }
 
-// All statement nodes implement this
-pub trait Statement: Node + CloneNode + Debug {
-    fn statement_node(&self);
+#[derive(Clone, Debug)]
+pub struct AssignStatement {
+    pub token: Token, // LET
+    pub name: Identifier,
+    pub value: Box<dyn Expression>,
+}
+
+impl Node for AssignStatement {
+    fn token_literal(&self) -> String {
+        self.token.literal.to_string()
+    }
+
+    fn to_string(&self) -> String {
+        let mut out = String::new();
+
+        let _ = out.write_str(&self.token.literal);
+        let _ = out.write_str(" ");
+        let _ = out.write_str(" = ");
+
+        let _ = out.write_str(&self.value.to_string());
+        let _ = out.write_str(";");
+        out
+    }
+
+    fn get_type(self: Box<Self>) -> NodeType {
+        NodeType::AssignStmt(self)
+    }
+}
+
+impl Expression for AssignStatement {
+    fn expression_node(&self) {}
 }
 
 // All expression nodes implement this
@@ -93,6 +122,9 @@ pub struct Identifier {
 }
 
 impl Identifier {
+    pub fn new(token: Token, value: String) -> Self {
+        Self { token, value }
+    }
     pub fn get_value(&self) -> String {
         self.value.to_string()
     }

@@ -1,14 +1,15 @@
 use crate::interpreter::ast::{
-    CallExpression, Expression, Identifier, InfixExpression, Node, NodeType, PrefixExpression,
+    AssignStatement, CallExpression, Expression, Identifier, InfixExpression, Node, NodeType,
+    PrefixExpression,
 };
 use crate::interpreter::builtin::BUILTINS;
 use crate::interpreter::object::{
-    CloneObj, Duration, Env, Error, IntObj, Note, Object, Octave, Sound, Type,
+    CloneObj, Duration, Env, Error, IntObj, Note, Null, Object, Octave, Sound, Type,
 };
 use crate::player::sound::{Note as PNote, Sound as PSound};
 use crate::player::tempo::Duration as PDuration;
 
-pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
+pub fn eval(node: Box<dyn Node>, env: &mut Env) -> Box<dyn Object> {
     match node.get_type() {
         NodeType::CallExp(call_exp) => eval_call_exp(*call_exp, env),
         NodeType::InfixExp(infix_exp) => eval_infix_expr(*infix_exp, env),
@@ -20,10 +21,17 @@ pub fn eval(node: Box<dyn Node>, env: &Env) -> Box<dyn Object> {
             int_obj.clone_obj()
         }
         NodeType::PrefixExpr(prefix_expr) => eval_prefix_expr(*prefix_expr, env),
+        NodeType::AssignStmt(assign_statement) => eval_assign_statement(*assign_statement, env),
     }
 }
 
-fn eval_prefix_expr(prefix_exp: PrefixExpression, env: &Env) -> Box<dyn Object> {
+fn eval_assign_statement(assign_statement: AssignStatement, env: &mut Env) -> Box<dyn Object> {
+    let expr = eval(assign_statement.value.to_node(), env);
+    env.set(assign_statement.name.value, expr);
+    Box::new(Null {})
+}
+
+fn eval_prefix_expr(prefix_exp: PrefixExpression, env: &mut Env) -> Box<dyn Object> {
     let right = eval(prefix_exp.right.to_node(), env);
 
     if right.is_error() {
@@ -48,7 +56,7 @@ fn eval_minus_prefix(right: Box<dyn Object>) -> Box<dyn Object> {
     }
 }
 
-fn eval_call_exp(call_exp: CallExpression, env: &Env) -> Box<dyn Object> {
+fn eval_call_exp(call_exp: CallExpression, env: &mut Env) -> Box<dyn Object> {
     let func = eval(call_exp.func.to_node(), env);
     if func.is_error() {
         return func;
@@ -73,7 +81,7 @@ pub fn new_error(msg: String) -> Box<dyn Object> {
     err
 }
 
-fn eval_infix_expr(infix_exp: InfixExpression, env: &Env) -> Box<dyn Object> {
+fn eval_infix_expr(infix_exp: InfixExpression, env: &mut Env) -> Box<dyn Object> {
     let left = eval(infix_exp.left.to_node(), env);
     if left.is_error() {
         return left;
@@ -113,7 +121,7 @@ fn eval_int_infix_expr(op: &str, left: i32, right: i32) -> Box<dyn Object> {
     obj
 }
 
-fn eval_exprs(expr: Vec<Box<dyn Expression>>, env: &Env) -> Vec<Box<dyn Object>> {
+fn eval_exprs(expr: Vec<Box<dyn Expression>>, env: &mut Env) -> Vec<Box<dyn Object>> {
     let mut objs = vec![];
 
     for ex in expr {
@@ -248,8 +256,8 @@ fn test_eval_int_expr() {
         let mut p = Parser::new(lex);
         let program = p.parse_program();
         for exp in program.exprs {
-            let env = Env::new();
-            let evaluated = eval(exp.to_node(), &env);
+            let mut env = Env::new();
+            let evaluated = eval(exp.to_node(), &mut env);
             let t = evaluated.get_type();
             match &t {
                 Type::Int(i) => assert_eq!(&res, i),
@@ -268,7 +276,20 @@ fn test_eval_float_not_implemented_expr() {
     let mut p = Parser::new(lex);
     let program = p.parse_program();
     for exp in program.exprs {
-        let env = Env::new();
-        let _ = eval(exp.to_node(), &env);
+        let mut env = Env::new();
+        let _ = eval(exp.to_node(), &mut env);
+    }
+}
+
+#[test]
+fn test_track() {
+    let expr = "let a = track(a_3_8*);";
+
+    let lex = Lexer::new(expr);
+    let mut p = Parser::new(lex);
+    let program = p.parse_program();
+    for exp in program.exprs {
+        let mut env = Env::new();
+        let _ = eval(exp.to_node(), &mut env);
     }
 }

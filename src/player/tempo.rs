@@ -59,7 +59,7 @@ impl Duration {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SampleClock {
     sample_clock: f32,
     end: f32,

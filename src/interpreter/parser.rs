@@ -1,4 +1,4 @@
-use crate::interpreter::ast::NodeType;
+use crate::interpreter::ast::{AssignStatement, NodeType};
 use crate::interpreter::ast::{
     CallExpression, Expression, Identifier, InfixExpression, IntegerLiteral, PrefixExpression,
     Program,
@@ -77,12 +77,33 @@ impl Parser {
         let mut exprs = vec![];
 
         while !self.cur_token_is(TokenType::Eof) {
-            if let Some(e) = self.parse_whole_expr() {
+            let expr = match &self.cur_token.ttype {
+                TokenType::Let => self.parse_let(),
+                _ => self.parse_whole_expr(),
+            };
+            if let Some(e) = expr {
                 exprs.push(e);
             }
             self.next_token();
         }
         Program { exprs }
+    }
+
+    fn parse_let(&mut self) -> Option<Box<dyn Expression>> {
+        let token = self.cur_token.clone();
+        self.expect_peek(TokenType::Ident)?;
+
+        let name = Identifier::new(self.cur_token.clone(), self.cur_token.literal.to_string());
+        self.expect_peek(TokenType::Assign)?;
+
+        self.next_token();
+        let value = self.parse_expression(Precedence::Lowest)?;
+
+        if self.peek_token_is(TokenType::Semicolon) {
+            self.next_token();
+        }
+
+        Some(Box::new(AssignStatement { token, name, value }))
     }
 
     fn parse_plus_infix(&mut self, left: Box<dyn Expression>) -> Box<dyn Expression> {
@@ -137,7 +158,11 @@ impl Parser {
         expr: Box<dyn Expression>,
     ) -> Option<Box<dyn Expression>> {
         match token_type {
-            TokenType::Plus | TokenType::Minus | TokenType::Asterisk | TokenType::Slash => {
+            TokenType::Plus
+            | TokenType::Minus
+            | TokenType::Asterisk
+            | TokenType::Slash
+            | TokenType::Eq => {
                 self.next_token();
                 Some(self.parse_plus_infix(expr))
             }
@@ -145,7 +170,7 @@ impl Parser {
                 self.next_token();
                 Some(self.parse_call_exp(expr))
             }
-            _ => unimplemented!("{:?}", token_type),
+            _ => unimplemented!("infix {:?}", token_type),
         }
     }
 
@@ -296,19 +321,11 @@ fn test_call_expression_parsing() {
 }
 
 #[test]
-fn test_skip_comments() {
-    let input = "
-//make multiline work
-// set first octave and duration as defaults
-// make multiple tracks playable simultaneously
-// write intellij plugin
-// imeplement + operator for notes
+fn test_assignment() {
+    let input = "let foo = c_4_4;";
 
-
-play(a_5_32,
-a_4_32);";
     let mut lex = Lexer::new(input);
     let mut p = Parser::new(lex);
     let prog = p.parse_program();
-    println!("{}", prog.to_string())
+    println!("expr {:?}", prog.exprs);
 }

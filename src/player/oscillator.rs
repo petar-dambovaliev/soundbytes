@@ -3,11 +3,32 @@ use crate::player::tempo::SampleClock;
 use std::f32::consts::PI;
 use std::fmt::Debug;
 
-pub trait Oscillator: Debug + Send {
+pub type OscillatorBox = Box<dyn Oscillator>;
+
+pub trait Oscillator: Debug + Send + CloneOsc {
     fn oscillator(&mut self, hz: f32, sample_rate: f32, sample_clock: &SampleClock) -> f32;
 }
 
-#[derive(Debug)]
+pub trait CloneOsc {
+    fn clone_osc(&self) -> OscillatorBox;
+}
+
+impl<T> CloneOsc for T
+where
+    T: Oscillator + Clone + 'static,
+{
+    fn clone_osc(&self) -> OscillatorBox {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for OscillatorBox {
+    fn clone(&self) -> Self {
+        self.clone_osc()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct AnalogSaw {}
 
 #[allow(dead_code)]
@@ -30,7 +51,7 @@ impl Oscillator for AnalogSaw {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct TriangleWave {}
 
 #[allow(dead_code)]
@@ -54,7 +75,7 @@ impl Oscillator for TriangleWave {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct SinWave {}
 
 #[allow(dead_code)]

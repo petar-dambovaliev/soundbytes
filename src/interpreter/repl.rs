@@ -4,11 +4,8 @@ use crate::interpreter::object::{Duration, Env, Note, Octave};
 use crate::interpreter::parser::Parser;
 use crate::player::sound::{Note as PNote, Octave as POctave};
 use crate::player::tempo::Duration as PDUration;
-use std::io::{BufRead, BufReader, Read, Write};
+use std::io::{BufReader, Read, Write};
 
-const PROMPT: &[u8; 3] = b">> ";
-
-#[allow(dead_code)]
 pub fn start(in_: impl Read, mut out: impl Write) {
     let mut buf_reader = BufReader::new(in_);
     let mut env = Env::new();
@@ -17,14 +14,14 @@ pub fn start(in_: impl Read, mut out: impl Write) {
     let mut input = String::new();
     let _ = buf_reader.read_to_string(&mut input);
 
-    let _ = out.write(PROMPT);
+    let _ = out.write(b"playing your music\n");
 
     let lex = Lexer::new(&input);
     let mut p = Parser::new(lex);
 
     let program = Box::new(p.parse_program());
     for expr in program.exprs {
-        let evaluated = eval(expr.to_node(), &env);
+        let evaluated = eval(expr.to_node(), &mut env);
         let _ = out.write(evaluated.inspect().as_bytes());
         let _ = out.write(b"\n");
     }

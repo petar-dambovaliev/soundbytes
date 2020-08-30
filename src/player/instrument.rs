@@ -1,28 +1,46 @@
 use super::sound::Sound;
 use crate::player::effect::EffectBox;
-use crate::player::oscillator::Oscillator;
+use crate::player::oscillator::{Oscillator, OscillatorBox};
 use crate::player::sound::{Envelope, Frequency};
 use crate::player::tempo::{calc_duration, Rates, SampleClock};
 use std::collections::VecDeque;
 use std::fmt::Debug;
 
-pub trait Instrument: Debug + Send {
+pub trait Instrument: Debug + Send + CloneIns {
     fn next_freq(&mut self, sample_rate: f32, beat_per_min: f32) -> f32;
     fn is_playing(&self) -> bool;
     fn is_finished(&self) -> bool;
 }
 
-pub type OscillatorBox = Box<dyn Oscillator>;
+pub trait CloneIns {
+    fn clone_ins(&self) -> InstrumentBox;
+}
+
+impl<T> CloneIns for T
+where
+    T: Instrument + Clone + 'static,
+{
+    fn clone_ins(&self) -> InstrumentBox {
+        Box::new(self.clone())
+    }
+}
+
+impl Clone for InstrumentBox {
+    fn clone(&self) -> Self {
+        self.clone_ins()
+    }
+}
+
 pub type InstrumentBox = Box<dyn Instrument>;
 pub type Instruments = Vec<InstrumentBox>;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Options {
     pub(crate) osc: OscillatorBox,
     pub(crate) env: Envelope,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct Inner {
     score: VecDeque<Sound>,
     effects: Option<Vec<EffectBox>>,
@@ -32,7 +50,7 @@ struct Inner {
     sample_clock: SampleClock,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Synth {
     inner: Inner,
     opts: Options,

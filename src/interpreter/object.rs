@@ -1,3 +1,4 @@
+use crate::player::instrument::InstrumentBox;
 use crate::player::sound::{Note as PNote, Octave as POctave, Sound as PSound};
 use crate::player::tempo::Duration as PDuration;
 use std::collections::HashMap;
@@ -11,6 +12,7 @@ pub enum Type {
     TimeSignature(TimeSignature),
     Error(String),
     Sound(Sound),
+    Instrument(Instrument),
     Note(Note),
     Octave(Octave),
     Duration(Duration),
@@ -27,6 +29,7 @@ impl Debug for Type {
             Self::TimeSignature(ts) => f.write_str(&format!("TimeSignature({}/{})", ts.n, ts.dur)),
             Self::Error(i) => f.write_str(&format!("Error({})", i)),
             Self::Sound(n) => f.write_str(&n.inspect()),
+            Self::Instrument(n) => f.write_str(&n.inspect()),
             Self::Note(n) => f.write_str(&n.inspect()),
             Self::Octave(n) => f.write_str(&n.inspect()),
             Self::Duration(n) => f.write_str(&n.inspect()),
@@ -34,6 +37,8 @@ impl Debug for Type {
         }
     }
 }
+
+type ObjectBox = Box<dyn Object>;
 
 pub trait Object: CloneObj + Debug {
     fn get_type(self: Box<Self>) -> Type;
@@ -44,21 +49,45 @@ pub trait Object: CloneObj + Debug {
 }
 
 pub trait CloneObj {
-    fn clone_obj(&self) -> Box<dyn Object>;
+    fn clone_obj(&self) -> ObjectBox;
 }
 
 impl<T> CloneObj for T
 where
     T: Object + Clone + 'static,
 {
-    fn clone_obj(&self) -> Box<dyn Object> {
+    fn clone_obj(&self) -> ObjectBox {
         Box::new(self.clone())
     }
 }
 
-impl Clone for Box<dyn Object> {
+impl Clone for ObjectBox {
     fn clone(&self) -> Self {
         self.clone_obj()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Instrument {
+    ins: InstrumentBox,
+}
+
+impl Instrument {
+    pub fn new(ins: InstrumentBox) -> Self {
+        Self { ins }
+    }
+    pub fn get_instrument(&self) -> InstrumentBox {
+        self.ins.clone()
+    }
+}
+
+impl Object for Instrument {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Instrument(*self)
+    }
+
+    fn inspect(&self) -> String {
+        format!("Instrument: {:?}", self.ins)
     }
 }
 
@@ -82,7 +111,7 @@ impl Object for Duration {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.dur)
+        format!("Duration: {:?}", self.dur)
     }
 }
 
@@ -232,9 +261,9 @@ impl Object for StringObj {
     }
 }
 
-pub trait BuiltinFn: Fn(Vec<Box<dyn Object>>) -> Box<dyn Object> + Sync {}
-impl BuiltinFn for fn(Vec<Box<dyn Object>>) -> Box<dyn Object> {}
-type DefaultBuiltinFunc = fn(Vec<Box<dyn Object + 'static>>) -> Box<dyn Object>;
+pub trait BuiltinFn: Fn(Vec<ObjectBox>) -> ObjectBox + Sync {}
+impl BuiltinFn for fn(Vec<ObjectBox>) -> ObjectBox {}
+type DefaultBuiltinFunc = fn(Vec<Box<dyn Object + 'static>>) -> ObjectBox;
 
 #[derive(Clone, Debug)]
 pub struct BuiltinObj {
@@ -269,7 +298,7 @@ impl Object for Error {
 
 #[derive(Debug)]
 pub struct Env {
-    store: HashMap<String, Box<dyn Object>>,
+    store: HashMap<String, ObjectBox>,
     outer: Option<Box<Env>>,
 }
 
@@ -288,7 +317,7 @@ impl Env {
         }
     }
 
-    pub fn get(&self, name: &str) -> Option<Box<dyn Object>> {
+    pub fn get(&self, name: &str) -> Option<ObjectBox> {
         if let Some(s) = self.store.get(name) {
             return Some(s.clone());
         }
@@ -300,7 +329,7 @@ impl Env {
         None
     }
 
-    pub fn set(&mut self, name: String, obj: Box<dyn Object>) {
+    pub fn set(&mut self, name: String, obj: ObjectBox) {
         self.store.insert(name, obj);
     }
 }

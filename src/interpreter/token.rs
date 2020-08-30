@@ -51,6 +51,8 @@ pub enum TokenType {
     //Play,
     //Repeat,
     If,
+    Assign,
+    Let,
 }
 
 impl Default for TokenType {
@@ -63,10 +65,9 @@ impl Default for TokenType {
 impl TokenType {
     fn from_str(s: &str) -> Self {
         match s {
-            "ILLEGAL" => Self::Illegal,
-            "EOF" => Self::Eof,
-            "IDENT" => Self::Ident,
-            "INT" => Self::Int,
+            "eof" => Self::Eof,
+            "ident" => Self::Ident,
+            "int" => Self::Int,
             "+" => Self::Plus,
             "*" => Self::Asterisk,
             "," => Self::Comma,
@@ -77,7 +78,8 @@ impl TokenType {
             "}" => Self::Rbrace,
             "/" => Self::Slash,
             "-" => Self::Minus,
-            //"PLAY" => Self::Play,
+            "=" => Self::Assign,
+            "let" => Self::Let,
             //"REPEAT" => Self::Repeat,
             "IF" => Self::If,
             //"TEMPO" => Self::Tempo,
@@ -88,9 +90,10 @@ impl TokenType {
 
 lazy_static! {
     static ref KEYWORDS: HashMap<String, TokenType> = {
-        HashMap::new()
-        // hp.insert("play".to_string(), TokenType::Play);
+        let mut hp = HashMap::new();
+        hp.insert("let".to_string(), TokenType::Let);
         // hp.insert("repeat".to_string(), TokenType::Repeat);
         // hp.insert("tempo".to_string(), TokenType::Tempo);
+        hp
     };
 }

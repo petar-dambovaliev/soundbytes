@@ -1,0 +1,20 @@
+tempo(66);
+
+// make multiple tracks playable simultaneously
+// set first octave and duration as defaults
+// write vscode plugin
+// imeplement + operator for notes
+// add lines in the error messages
+
+let bass = track(a_3_8*, b_3_8*, g#_2_8*, a_3_8*, f_2_8*, f#_2_8*, g_2_8*, g_2_8*);
+let bass2 = track(x_8*, x_8*, g#_2_16, b_3_16, d_3_16, f_3_16, e_3_16, c_2_16, e_2_16);
+let solo = track(
+        a_5_32, c_5_32, e_5_32, a_5_32, c_5_32, e_5_32, b_5_32, d_5_32,
+        f_5_32, b_5_32, d_5_32, f_5_32, g#_4_32, b_5_32, d_5_32, g#_4_32,
+        b_5_32, d_5_32, a_5_32, c_5_32, e_5_32, a_5_32, c_5_32, e_5_32,
+        f_4_32, a_5_32, c_5_32, f_4_32, a_5_32, c_5_32, f#_4_32, a_5_32,
+        c_5_32, f#_4_32, a_5_32, c_5_32, f_5_32, e_5_32, d_5_32, c_5_32,
+        b_5_32, a_5_32, b_5_32, c_5_32, d_5_32, e_5_32, f_5_32, g_5_32
+       );
+
+play(bass, bass2, solo);

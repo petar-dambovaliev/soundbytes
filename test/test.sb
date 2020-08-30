@@ -1,8 +1,0 @@
-tempo(66);
-
-//make multiline work
-// set first octave and duration as defaults
-// make multiple tracks playable simultaneously
-// write intellij plugin
-
-play(a_5_32, c_5_32, e_5_32, a_5_32, c_5_32, e_5_32, b_5_32, d_5_32, f_5_32, b_5_32, d_5_32, f_5_32, g#_4_32, b_5_32, d_5_32, g#_4_32, b_5_32, d_5_32, a_5_32, c_5_32, e_5_32, a_5_32, c_5_32, e_5_32, f_4_32, a_5_32, c_5_32, f_4_32, a_5_32, c_5_32, f#_4_32, a_5_32, c_5_32, f#_4_32, a_5_32, c_5_32, f_5_32, e_5_32, d_5_32, c_5_32, b_5_32, a_5_32, b_5_32, c_5_32, d_5_32, e_5_32, f_5_32, g_5_32);

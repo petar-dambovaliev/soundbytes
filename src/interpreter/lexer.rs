@@ -38,13 +38,14 @@ impl Lexer {
             '/' => tok = new_token(TokenType::Slash, self.ch),
             '-' => tok = new_token(TokenType::Minus, self.ch),
             ',' => tok = new_token(TokenType::Comma, self.ch),
+            '=' => tok = new_token(TokenType::Assign, self.ch),
             DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
             _ => {
                 if self.ch.is_alphabetic() {
                     let literal = self.read_ident();
 
                     return Token {
-                        ttype: lookup_ident(literal.as_str()),
+                        ttype: lookup_ident(&literal),
                         literal,
                     };
                 }
@@ -263,4 +264,25 @@ a_4_32);";
     let tok = lex.next_token();
     assert_eq!(TokenType::Ident, tok.ttype);
     assert_eq!("play", tok.literal);
+}
+
+#[test]
+fn test_assignment() {
+    let input = "let foo = c_4_4;";
+    let tokens_type: [TokenType; 5] = [
+        TokenType::Let,
+        TokenType::Ident,
+        TokenType::Assign,
+        TokenType::Ident,
+        TokenType::Semicolon,
+    ];
+    let tokens_str: [&str; 5] = ["let", "foo", "=", "c_4_4", ";"];
+
+    let mut lex = Lexer::new(input);
+
+    for (key, token) in tokens_type.iter().enumerate() {
+        let tok = lex.next_token();
+        assert_eq!(token, &tok.ttype);
+        assert_eq!(tokens_str[key], tok.literal);
+    }
 }
