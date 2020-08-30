@@ -1,4 +1,4 @@
-use crate::interpreter::ast::{AssignStatement, NodeType};
+use crate::interpreter::ast::AssignStatement;
 use crate::interpreter::ast::{
     CallExpression, Expression, Identifier, InfixExpression, IntegerLiteral, PrefixExpression,
     Program,

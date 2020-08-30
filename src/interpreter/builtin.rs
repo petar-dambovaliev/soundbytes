@@ -1,5 +1,5 @@
 use crate::interpreter::eval::new_error;
-use crate::interpreter::object::{BuiltinObj, Instrument, Object, Sound};
+use crate::interpreter::object::{BuiltinObj, Instrument, Object};
 use crate::interpreter::object::{Null, Type};
 use crate::player::instrument::{InstrumentBox, Options, Synth};
 use crate::player::oscillator::AnalogSaw;

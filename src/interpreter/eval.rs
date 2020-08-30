@@ -3,17 +3,15 @@ use crate::interpreter::ast::{
     PrefixExpression,
 };
 use crate::interpreter::builtin::BUILTINS;
-use crate::interpreter::object::{
-    CloneObj, Duration, Env, Error, IntObj, Note, Null, Object, Octave, Sound, Type,
-};
+use crate::interpreter::object::{CloneObj, Env, Error, IntObj, Null, Object, Sound, Type};
+use crate::interpreter::token::{Token, TokenType};
 use crate::player::sound::{Note as PNote, Sound as PSound};
-use crate::player::tempo::Duration as PDuration;
 
 pub fn eval(node: Box<dyn Node>, env: &mut Env) -> Box<dyn Object> {
     match node.get_type() {
         NodeType::CallExp(call_exp) => eval_call_exp(*call_exp, env),
         NodeType::InfixExp(infix_exp) => eval_infix_expr(*infix_exp, env),
-        NodeType::Ident(ident) => eval_ident(ident, env),
+        NodeType::Ident(ident) => eval_ident(*ident, env),
         NodeType::IntLit(int_lit) => {
             let int_obj = IntObj {
                 value: int_lit.get_value(),
@@ -141,13 +139,13 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
     let n = match spl.next() {
         Some(note) => {
             let n_eval = eval_ident(
-                Box::new(Identifier {
+                Identifier {
                     token: Token {
                         ttype: TokenType::Ident,
                         literal: note.to_string(),
                     },
                     value: note.to_string(),
-                }),
+                },
                 env,
             );
 
@@ -168,13 +166,13 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
     let oct = match oct_ {
         Some(o) => {
             let oct_eval = eval_ident(
-                Box::new(Identifier {
+                Identifier {
                     token: Token {
                         ttype: TokenType::Ident,
                         literal: format!("o{}", o),
                     },
                     value: format!("o{}", o),
-                }),
+                },
                 env,
             );
 
@@ -189,13 +187,13 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
     let dur = match spl.next() {
         Some(d) => {
             let dur_eval = eval_ident(
-                Box::new(Identifier {
+                Identifier {
                     token: Token {
                         ttype: TokenType::Ident,
                         literal: format!("d{}", d),
                     },
                     value: format!("d{}", d),
-                }),
+                },
                 env,
             );
             let ins = dur_eval.inspect();
@@ -217,7 +215,7 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
     })
 }
 
-fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
+fn eval_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
     if let Some(val) = env.get(ident.get_value().as_str()) {
         return val.clone_obj();
     }
@@ -227,7 +225,7 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
     }
 
     if ident.get_value().contains('_') {
-        return eval_note_ident(*ident, env);
+        return eval_note_ident(ident, env);
     }
 
     new_error(format!("not found: `{}`", ident.to_string()))
@@ -237,9 +235,6 @@ fn eval_ident(ident: Box<Identifier>, env: &Env) -> Box<dyn Object> {
 use crate::interpreter::lexer::Lexer;
 #[cfg(test)]
 use crate::interpreter::parser::Parser;
-use crate::interpreter::token::{Token, TokenType};
-use std::collections::VecDeque;
-use std::option::Option::Some;
 
 #[test]
 fn test_eval_int_expr() {

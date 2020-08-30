@@ -1,6 +1,6 @@
 use super::sound::Sound;
 use crate::player::effect::EffectBox;
-use crate::player::oscillator::{Oscillator, OscillatorBox};
+use crate::player::oscillator::OscillatorBox;
 use crate::player::sound::{Envelope, Frequency};
 use crate::player::tempo::{calc_duration, Rates, SampleClock};
 use std::collections::VecDeque;
