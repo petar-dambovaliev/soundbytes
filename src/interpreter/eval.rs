@@ -183,7 +183,7 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
                 _ => return new_error("invalid note arg 2 octave".to_string()),
             }
         }
-        _ => return new_error("invalid note arg 2 octave".to_string()),
+        _ => return Box::new(n),
     };
 
     let dur = match spl.next() {
@@ -239,6 +239,7 @@ use crate::interpreter::lexer::Lexer;
 use crate::interpreter::parser::Parser;
 use crate::interpreter::token::{Token, TokenType};
 use std::collections::VecDeque;
+use std::option::Option::Some;
 
 #[test]
 fn test_eval_int_expr() {
@@ -284,12 +285,23 @@ fn test_eval_float_not_implemented_expr() {
 #[test]
 fn test_track() {
     let expr = "let a = track(a_3_8*);";
-
     let lex = Lexer::new(expr);
     let mut p = Parser::new(lex);
     let program = p.parse_program();
+    let mut env = Env::new();
+
+    assert_eq!(1, program.exprs.len());
+
     for exp in program.exprs {
-        let mut env = Env::new();
-        let _ = eval(exp.to_node(), &mut env);
+        let obj = eval(exp.to_node(), &mut env);
+        if let Type::Null = obj.get_type() {
+            return;
+        }
+        panic!("expected Null object");
     }
+
+    if let Some(t) = env.get("a") {
+        return;
+    }
+    panic!("expected `a` identifier to be stored in the env");
 }

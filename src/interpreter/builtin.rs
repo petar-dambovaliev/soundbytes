@@ -1,15 +1,14 @@
 use crate::interpreter::eval::new_error;
-use crate::interpreter::object::{BuiltinObj, Instrument, Object};
+use crate::interpreter::object::{BuiltinObj, Instrument, Object, Sound};
 use crate::interpreter::object::{Null, Type};
 use crate::player::instrument::{InstrumentBox, Options, Synth};
 use crate::player::oscillator::AnalogSaw;
 use crate::player::play::{PlayErr, Player};
 use crate::player::song::Song;
-use crate::player::sound::Envelope;
+use crate::player::sound::{Envelope, Sound as PSound};
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use std::collections::{HashMap, VecDeque};
-use std::io::Read;
 use std::sync::Mutex;
 
 lazy_static! {
@@ -24,11 +23,7 @@ lazy_static! {
     };
 }
 
-fn track(mut args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
-    if args.is_empty() {
-        return new_error("zero arguments given to track. i am expecting notes".to_string());
-    }
-
+fn track(args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
     let ins = match notes_to_ins(args) {
         Ok(s) => s,
         Err(e) => return e,
@@ -36,7 +31,7 @@ fn track(mut args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
     Box::new(Instrument::new(ins))
 }
 
-fn play(mut args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
+fn play(args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
     if args.is_empty() {
         return new_error(
             "zero arguments given to play. what am i supposed to play, huh?".to_string(),
@@ -45,8 +40,8 @@ fn play(mut args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
 
     let first = args.first().unwrap().clone();
     let song = match first.clone().get_type() {
-        Type::Instrument(ins) => ins_to_song(args),
-        Type::Note(n) => notes_to_song(args),
+        Type::Instrument(_) => ins_to_song(args),
+        Type::Sound(_) => notes_to_song(args),
         _ => return new_error(format!("invalid argument for play {:?}", first.get_type())),
     };
     let song = match song {
@@ -109,19 +104,50 @@ fn new_opts() -> Options {
 }
 
 fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, Box<dyn Object>> {
+    if args.is_empty() {
+        return Err(new_error(
+            "zero arguments given to track. i am expecting notes".to_string(),
+        ));
+    }
+
     let mut sounds = VecDeque::with_capacity(args.len());
     let mut i: usize = 0;
+    let mut def_oct;
+    let mut def_dur;
+
+    match args.first().unwrap().clone().get_type() {
+        Type::Sound(sound) => {
+            let s = sound.get_sound();
+            def_oct = s.octave.clone();
+            def_dur = s.duration;
+        }
+        _ => {
+            return Err(new_error(
+                "expected first note to have an octave and duration".to_string(),
+            ))
+        }
+    }
+
     for arg in args {
         let info = arg.inspect();
-        if let Type::Sound(sound) = arg.get_type() {
-            sounds.push_back(sound.get_sound());
-            i += 1;
-            continue;
+        match arg.get_type() {
+            Type::Sound(sound) => {
+                let s = sound.clone().get_sound();
+                def_oct = s.octave.clone();
+                def_dur = s.duration.clone();
+                sounds.push_back(s);
+                i += 1;
+            }
+            Type::Note(n) => {
+                sounds.push_back(PSound::new(n.get_note(), def_oct.clone(), def_dur.clone()))
+            }
+            _ => {
+                return Err(new_error(format!(
+                    "expected note, argument {} is {}",
+                    i, info
+                )));
+            }
         }
-        return Err(new_error(format!(
-            "expected note, argument {} is {}",
-            i, info
-        )));
     }
 
     Ok(Box::new(Synth::new(new_opts(), sounds)))
