@@ -50,3 +50,5 @@ The function `play` also accepts single notes but `notes` and `tracks` cannot be
 
 Running the code
 1. Compile the project and give the `.sb` source file to the binary
+
+You can also checkout the test file in `/test`
