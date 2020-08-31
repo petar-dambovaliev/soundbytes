@@ -1,11 +1,13 @@
 use crate::interpreter::eval::new_error;
-use crate::interpreter::object::{BuiltinObj, Instrument, Object, Sound};
+use crate::interpreter::object::{BuiltinObj, Instrument, Object};
 use crate::interpreter::object::{Null, Type};
 use crate::player::instrument::{InstrumentBox, Options, Synth};
 use crate::player::oscillator::AnalogSaw;
 use crate::player::play::{PlayErr, Player};
 use crate::player::song::Song;
+use crate::player::sound::Octave;
 use crate::player::sound::{Envelope, Sound as PSound};
+use crate::player::tempo::Duration;
 use lazy_static::lazy_static;
 use log::{error, info, warn};
 use std::collections::{HashMap, VecDeque};
@@ -41,7 +43,7 @@ fn play(args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
     let first = args.first().unwrap().clone();
     let song = match first.clone().get_type() {
         Type::Instrument(_) => ins_to_song(args),
-        Type::Sound(_) => notes_to_song(args),
+        Type::Sound(_) | Type::Chord(_) => notes_to_song(args),
         _ => return new_error(format!("invalid argument for play {:?}", first.get_type())),
     };
     let song = match song {
@@ -112,11 +114,11 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
 
     let mut sounds = VecDeque::with_capacity(args.len());
     let mut i: usize = 0;
-    let mut def_oct;
-    let mut def_dur;
+    let mut def_oct = Octave::One;
+    let mut def_dur = Duration::Whole;
 
-    if let Some(first) = args.first() {
-        match first.clone().get_type() {
+    match args.first() {
+        Some(first) => match first.clone().get_type() {
             Type::Sound(sound) => {
                 let s = sound.get_sound();
                 def_oct = s.octave.clone();
@@ -139,6 +141,11 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
                     "expected first note to have an octave and duration".to_string(),
                 ))
             }
+        },
+        _ => {
+            return Err(new_error(
+                "expected first note to have an octave and duration".to_string(),
+            ))
         }
     }
 
@@ -158,9 +165,12 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
                 def_dur.clone(),
             )]),
             Type::Chord(chord) => {
-                for n in chord.get_sounds() {
-                    sounds.push_back(vec![n.sound]);
+                let chord = chord.get_sounds();
+                let mut sound = Vec::with_capacity(chord.len());
+                for s in chord {
+                    sound.push(s.sound);
                 }
+                sounds.push_back(sound);
             }
             _ => {
                 return Err(new_error(format!(

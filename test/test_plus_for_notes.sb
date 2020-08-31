@@ -1,4 +1,8 @@
 tempo(66);
 
 //c maj arpeggio
-play(c_5_8 + e + a);
+play(c_3_8 + e + g, x_8);
+
+play(c_4_4 + e + g, x_8);
+
+play(c_5_4 + e + g);

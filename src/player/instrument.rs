@@ -1,7 +1,7 @@
 use super::sound::Sound;
 use crate::player::effect::EffectBox;
 use crate::player::oscillator::OscillatorBox;
-use crate::player::sound::{Envelope, Frequency};
+use crate::player::sound::Envelope;
 use crate::player::tempo::{calc_duration, Rates, SampleClock};
 use std::collections::VecDeque;
 use std::fmt::Debug;
@@ -42,7 +42,6 @@ pub struct Options {
 #[derive(Debug, Clone)]
 struct InnerSound {
     sample_clock: SampleClock,
-    end: f32,
     freq: f32,
     effects: Option<Vec<EffectBox>>,
     sample_rate: f32,
@@ -57,13 +56,11 @@ impl InnerSound {
         });
 
         let freq = sound.note.frequency(sound.octave);
-        let mut sample_clock = SampleClock::new();
-        sample_clock.calc_end(beat_frame_dur);
+        let sample_clock = SampleClock::new(beat_frame_dur);
         let effects = sound.effects;
 
         Self {
             sample_clock,
-            end: 0.0,
             freq,
             effects,
             sample_rate,
@@ -81,7 +78,7 @@ impl InnerSound {
     }
 
     fn has_ended(&self) -> bool {
-        self.sample_clock.get_clock() as u32 != self.end as u32
+        self.sample_clock.has_ended()
     }
 }
 
@@ -105,8 +102,10 @@ impl Synth {
             opts,
         }
     }
+}
 
-    fn next_frequency(&mut self, sample_rate: f32, beat_per_min: f32) -> f32 {
+impl Instrument for Synth {
+    fn next_freq(&mut self, sample_rate: f32, beat_per_min: f32) -> f32 {
         let mut first_index: usize = 0;
         if self.first_finished {
             if let Some(sounds) = self.score.pop_front() {
@@ -117,7 +116,13 @@ impl Synth {
                         .push(InnerSound::new(sound, sample_rate, beat_per_min));
                 }
                 self.first_finished = false;
+            } else {
+                self.finished = true;
             }
+        }
+
+        if self.finished {
+            return 0.0;
         }
 
         if let Some(cur) = self.cur.get(first_index) {
@@ -126,9 +131,9 @@ impl Synth {
 
         self.cur.retain(|s| !s.has_ended());
 
-        let mut f = 0.0_f32;
+        let mut freq = 0.0_f32;
         for cur_sound in self.cur.iter_mut() {
-            f += apply_options(
+            freq += apply_options(
                 cur_sound.next_freq(),
                 &mut self.opts,
                 sample_rate,
@@ -136,18 +141,6 @@ impl Synth {
             );
         }
 
-        f
-    }
-}
-
-impl Instrument for Synth {
-    fn next_freq(&mut self, sample_rate: f32, beat_per_min: f32) -> f32 {
-        let freq = self.next_frequency(sample_rate, beat_per_min);
-
-        if freq as u32 == 0 {
-            self.finished = true;
-            return 0.0;
-        }
         freq
     }
 

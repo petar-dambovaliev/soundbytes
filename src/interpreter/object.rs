@@ -3,7 +3,6 @@ use crate::player::sound::{Note as PNote, Octave as POctave, Sound as PSound};
 use crate::player::tempo::Duration as PDuration;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result};
-use std::ops::Add;
 
 pub enum Type {
     Int(i32),
@@ -162,7 +161,7 @@ impl Object for Octave {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.octave)
+        format!("Octave: {:?}", self.octave)
     }
 }
 
@@ -211,7 +210,7 @@ impl Object for Sound {
     }
 
     fn inspect(&self) -> String {
-        format!("Note: {:?}", self.sound)
+        format!("Object Sound: {:?}", self)
     }
 }
 

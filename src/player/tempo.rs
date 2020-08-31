@@ -61,29 +61,30 @@ impl Duration {
 
 #[derive(Debug, Clone)]
 pub struct SampleClock {
-    sample_clock: f32,
-    end: f32,
+    dur: f32,
+    cur: f32,
+    ended: bool,
 }
 
-#[allow(dead_code)]
 impl SampleClock {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(dur: f32) -> Self {
         Self {
-            sample_clock: 0.0,
-            end: 0.0,
+            dur,
+            cur: 0.0,
+            ended: false,
         }
     }
     pub(crate) fn update_clock(&mut self) {
-        if self.sample_clock as u32 >= self.end as u32 {
-            self.sample_clock = 0.0;
+        if self.cur as u32 >= self.dur as u32 {
+            self.ended = true;
             return;
         }
-        self.sample_clock += 1.0;
-    }
-    pub(crate) fn calc_end(&mut self, dur: f32) {
-        self.end = self.get_clock() + dur;
+        self.cur += 1.0;
     }
     pub(crate) fn get_clock(&self) -> f32 {
-        self.sample_clock
+        self.cur
+    }
+    pub(crate) fn has_ended(&self) -> bool {
+        self.ended
     }
 }

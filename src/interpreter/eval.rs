@@ -3,7 +3,9 @@ use crate::interpreter::ast::{
     PrefixExpression,
 };
 use crate::interpreter::builtin::BUILTINS;
-use crate::interpreter::object::{Chord, CloneObj, Env, Error, IntObj, Null, Object, Sound, Type};
+use crate::interpreter::object::{
+    Chord, CloneObj, Env, Error, IntObj, Note, Null, Object, Sound, Type,
+};
 use crate::interpreter::token::{Token, TokenType};
 use crate::player::sound::{Note as PNote, Sound as PSound};
 
@@ -94,20 +96,76 @@ fn eval_infix_expr(infix_exp: InfixExpression, env: &mut Env) -> Box<dyn Object>
     let right_ins = right.inspect();
 
     match (left.get_type(), right.get_type()) {
+        // 5 + 5
         (Type::Int(l), Type::Int(r)) => eval_int_infix_expr(&infix_exp.operator, l, r),
-        (Type::Sound(l), Type::Sound(r)) => eval_note_infix_expr(&infix_exp.operator, l, r),
+        // c_4_16 + c_3_8
+        (Type::Sound(l), Type::Sound(r)) => eval_sound_infix_expr(&infix_exp.operator, l, r),
+        // let chord = c_4_16 + c_3_8;
+        // chord + c_5_16
         (Type::Chord(l), Type::Sound(r)) => {
             eval_chord_infix_expr(&infix_exp.operator, l, Chord::new(vec![r]))
         }
+        // let chord_left = c_4_16 + c_3_8;
+        // let chord_right = c_2_16 + c_3_8;
+        // chord_left + chord_right
         (Type::Chord(l), Type::Chord(r)) => eval_chord_infix_expr(&infix_exp.operator, l, r),
+        // let chord = c_4_16 + c_3_8;
+        // e_4_16 + chord
         (Type::Sound(l), Type::Chord(r)) => {
             eval_chord_infix_expr(&infix_exp.operator, Chord::new(vec![l]), r)
         }
+        // c_4_16 + e
+        (Type::Sound(l), Type::Note(r)) => {
+            eval_note_infix_expr(&infix_exp.operator, Chord::new(vec![l]), r)
+        }
+
+        // let chord = c_4_16 + c_3_8;
+        // chord + e
+        (Type::Chord(l), Type::Note(r)) => eval_note_infix_expr(&infix_exp.operator, l, r),
+
         _ => new_error(format!(
-            "unknown operator: {:?} {:?} {:?}",
-            left_ins, infix_exp.operator, right_ins
+            "unknown operands for plus: left - {:?}  right - {:?}",
+            left_ins, right_ins
         )),
     }
+}
+
+fn eval_note_infix_expr(op: &str, left: Chord, right: Note) -> Box<dyn Object> {
+    let left_ins = left.inspect();
+    let chord = match op {
+        "+" => {
+            let mut sounds = left.get_sounds();
+            let mut oct = None;
+            let mut dur = None;
+            for s in sounds.iter().rev() {
+                if !s.modified {
+                    oct = Some(s.sound.octave.clone());
+                    dur = Some(s.sound.duration.clone());
+                    break;
+                }
+            }
+
+            let (o, d) = match (oct, dur) {
+                (Some(o), Some(d)) => (o, d),
+                _ => {
+                    return new_error(format!(
+                        "unknown operator: op: '{}'  left: {:?}  right: {:?}",
+                        op, left_ins, right
+                    ))
+                }
+            };
+            sounds.push(Sound::new(PSound::new(right.get_note(), o, d), true));
+            Chord::new(sounds)
+        }
+        _ => {
+            return new_error(format!(
+                "unknown operator: op: '{}'  left: {:?}  right: {:?}",
+                op, left, right
+            ))
+        }
+    };
+    let obj: Box<dyn Object> = Box::new(chord);
+    obj
 }
 
 fn eval_chord_infix_expr(op: &str, left: Chord, right: Chord) -> Box<dyn Object> {
@@ -128,7 +186,7 @@ fn eval_chord_infix_expr(op: &str, left: Chord, right: Chord) -> Box<dyn Object>
     obj
 }
 
-fn eval_note_infix_expr(op: &str, left: Sound, right: Sound) -> Box<dyn Object> {
+fn eval_sound_infix_expr(op: &str, left: Sound, right: Sound) -> Box<dyn Object> {
     let chord = match op {
         "+" => vec![left, right],
         _ => {
