@@ -1,5 +1,5 @@
 use crate::interpreter::eval::new_error;
-use crate::interpreter::object::{BuiltinObj, Instrument, Object};
+use crate::interpreter::object::{BuiltinObj, Instrument, Object, Sound};
 use crate::interpreter::object::{Null, Type};
 use crate::player::instrument::{InstrumentBox, Options, Synth};
 use crate::player::oscillator::AnalogSaw;
@@ -115,16 +115,30 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
     let mut def_oct;
     let mut def_dur;
 
-    match args.first().unwrap().clone().get_type() {
-        Type::Sound(sound) => {
-            let s = sound.get_sound();
-            def_oct = s.octave.clone();
-            def_dur = s.duration;
-        }
-        _ => {
-            return Err(new_error(
-                "expected first note to have an octave and duration".to_string(),
-            ))
+    if let Some(first) = args.first() {
+        match first.clone().get_type() {
+            Type::Sound(sound) => {
+                let s = sound.get_sound();
+                def_oct = s.octave.clone();
+                def_dur = s.duration;
+            }
+            Type::Chord(chord) => {
+                if let Some(sound) = chord.get_sounds().first() {
+                    if sound.modified {
+                        return Err(new_error(
+                            "expected first note to have an octave and duration".to_string(),
+                        ));
+                    }
+                    let s = sound.clone().get_sound();
+                    def_oct = s.octave.clone();
+                    def_dur = s.duration;
+                }
+            }
+            _ => {
+                return Err(new_error(
+                    "expected first note to have an octave and duration".to_string(),
+                ))
+            }
         }
     }
 
@@ -135,11 +149,18 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
                 let s = sound.clone().get_sound();
                 def_oct = s.octave.clone();
                 def_dur = s.duration.clone();
-                sounds.push_back(s);
+                sounds.push_back(vec![s]);
                 i += 1;
             }
-            Type::Note(n) => {
-                sounds.push_back(PSound::new(n.get_note(), def_oct.clone(), def_dur.clone()))
+            Type::Note(n) => sounds.push_back(vec![PSound::new(
+                n.get_note(),
+                def_oct.clone(),
+                def_dur.clone(),
+            )]),
+            Type::Chord(chord) => {
+                for n in chord.get_sounds() {
+                    sounds.push_back(vec![n.sound]);
+                }
             }
             _ => {
                 return Err(new_error(format!(

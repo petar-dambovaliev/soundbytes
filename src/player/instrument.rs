@@ -8,7 +8,6 @@ use std::fmt::Debug;
 
 pub trait Instrument: Debug + Send + CloneIns {
     fn next_freq(&mut self, sample_rate: f32, beat_per_min: f32) -> f32;
-    fn is_playing(&self) -> bool;
     fn is_finished(&self) -> bool;
 }
 
@@ -41,78 +40,119 @@ pub struct Options {
 }
 
 #[derive(Debug, Clone)]
-struct Inner {
-    score: VecDeque<Sound>,
-    effects: Option<Vec<EffectBox>>,
-    freq: f32,
-    end: f32,
-    finished: bool,
+struct InnerSound {
     sample_clock: SampleClock,
+    end: f32,
+    freq: f32,
+    effects: Option<Vec<EffectBox>>,
+    sample_rate: f32,
 }
 
-#[derive(Debug, Clone)]
-pub struct Synth {
-    inner: Inner,
-    opts: Options,
-}
-
-#[allow(dead_code)]
-impl Synth {
-    pub fn new(opts: Options, score: VecDeque<Sound>) -> Self {
-        Self {
-            inner: Inner {
-                score,
-                effects: None,
-                freq: 0.0,
-                end: 0.0,
-                finished: false,
-                sample_clock: SampleClock::new(),
-            },
-            opts,
-        }
-    }
-
-    fn next_frequency(&mut self, sample_rate: f32, beat_per_min: f32) -> Option<Frequency> {
-        let sound = self.inner.score.pop_front()?;
-
+impl InnerSound {
+    fn new(sound: Sound, sample_rate: f32, beat_per_min: f32) -> Self {
         let beat_frame_dur = calc_duration(Rates {
             sample_rate,
             beat_per_min,
             duration: &sound.duration,
         });
 
-        let frequency = sound.note.frequency(sound.octave);
-        self.inner.sample_clock.calc_end(beat_frame_dur);
+        let freq = sound.note.frequency(sound.octave);
+        let mut sample_clock = SampleClock::new();
+        sample_clock.calc_end(beat_frame_dur);
         let effects = sound.effects;
 
-        Some(Frequency { frequency, effects })
+        Self {
+            sample_clock,
+            end: 0.0,
+            freq,
+            effects,
+            sample_rate,
+        }
+    }
+    fn next_freq(&mut self) -> f32 {
+        if self.has_ended() {
+            return 0.0;
+        }
+
+        let sc = &mut self.sample_clock;
+        let freq = apply_effects(self.freq, &self.effects, sc);
+        sc.update_clock();
+        freq
+    }
+
+    fn has_ended(&self) -> bool {
+        self.sample_clock.get_clock() as u32 != self.end as u32
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct Synth {
+    score: VecDeque<Vec<Sound>>,
+    cur: Vec<InnerSound>,
+    first_finished: bool,
+    finished: bool,
+    opts: Options,
+}
+
+#[allow(dead_code)]
+impl Synth {
+    pub fn new(opts: Options, score: VecDeque<Vec<Sound>>) -> Self {
+        Self {
+            score,
+            cur: vec![],
+            first_finished: true,
+            finished: false,
+            opts,
+        }
+    }
+
+    fn next_frequency(&mut self, sample_rate: f32, beat_per_min: f32) -> f32 {
+        let mut first_index: usize = 0;
+        if self.first_finished {
+            if let Some(sounds) = self.score.pop_front() {
+                first_index = self.cur.len();
+
+                for sound in sounds {
+                    self.cur
+                        .push(InnerSound::new(sound, sample_rate, beat_per_min));
+                }
+                self.first_finished = false;
+            }
+        }
+
+        if let Some(cur) = self.cur.get(first_index) {
+            self.first_finished = cur.has_ended();
+        }
+
+        self.cur.retain(|s| !s.has_ended());
+
+        let mut f = 0.0_f32;
+        for cur_sound in self.cur.iter_mut() {
+            f += apply_options(
+                cur_sound.next_freq(),
+                &mut self.opts,
+                sample_rate,
+                &cur_sound.sample_clock,
+            );
+        }
+
+        f
     }
 }
 
 impl Instrument for Synth {
     fn next_freq(&mut self, sample_rate: f32, beat_per_min: f32) -> f32 {
-        if !self.is_playing() {
-            if let Some(f) = self.next_frequency(sample_rate, beat_per_min) {
-                self.inner.freq = f.frequency;
-                self.inner.effects = f.effects;
-            } else {
-                self.inner.freq = 0.0;
-                self.inner.finished = true;
-            }
+        let freq = self.next_frequency(sample_rate, beat_per_min);
+
+        if freq as u32 == 0 {
+            self.finished = true;
+            return 0.0;
         }
-
-        let sc = &mut self.inner.sample_clock;
-        let freq = apply_effects(self.inner.freq, &self.inner.effects, sc);
-        sc.update_clock();
-        apply_options(freq, &mut self.opts, sample_rate, sc)
-    }
-
-    fn is_playing(&self) -> bool {
-        self.inner.sample_clock.get_clock() as u32 != self.inner.end as u32
+        freq
     }
 
     fn is_finished(&self) -> bool {
-        self.inner.finished
+        self.finished
     }
 }
 

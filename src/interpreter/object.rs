@@ -3,6 +3,7 @@ use crate::player::sound::{Note as PNote, Octave as POctave, Sound as PSound};
 use crate::player::tempo::Duration as PDuration;
 use std::collections::HashMap;
 use std::fmt::{Debug, Formatter, Result};
+use std::ops::Add;
 
 pub enum Type {
     Int(i32),
@@ -12,6 +13,7 @@ pub enum Type {
     TimeSignature(TimeSignature),
     Error(String),
     Sound(Sound),
+    Chord(Chord),
     Instrument(Instrument),
     Note(Note),
     Octave(Octave),
@@ -29,6 +31,7 @@ impl Debug for Type {
             Self::TimeSignature(ts) => f.write_str(&format!("TimeSignature({}/{})", ts.n, ts.dur)),
             Self::Error(i) => f.write_str(&format!("Error({})", i)),
             Self::Sound(n) => f.write_str(&n.inspect()),
+            Self::Chord(c) => f.write_str(&format!("chord {:?}", c)),
             Self::Instrument(n) => f.write_str(&n.inspect()),
             Self::Note(n) => f.write_str(&n.inspect()),
             Self::Octave(n) => f.write_str(&n.inspect()),
@@ -64,6 +67,30 @@ where
 impl Clone for ObjectBox {
     fn clone(&self) -> Self {
         self.clone_obj()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct Chord {
+    sounds: Vec<Sound>,
+}
+
+impl Chord {
+    pub fn new(sounds: Vec<Sound>) -> Self {
+        Self { sounds }
+    }
+    pub fn get_sounds(self) -> Vec<Sound> {
+        self.sounds
+    }
+}
+
+impl Object for Chord {
+    fn get_type(self: Box<Self>) -> Type {
+        Type::Chord(*self)
+    }
+
+    fn inspect(&self) -> String {
+        format!("chord: {:?}", self.sounds)
     }
 }
 
@@ -166,11 +193,12 @@ impl Object for Note {
 #[derive(Clone, Debug)]
 pub struct Sound {
     pub(crate) sound: PSound,
+    pub(crate) modified: bool,
 }
 
 impl Sound {
-    pub fn new(sound: PSound) -> Self {
-        Self { sound }
+    pub fn new(sound: PSound, modified: bool) -> Self {
+        Self { sound, modified }
     }
     pub fn get_sound(self) -> PSound {
         self.sound
