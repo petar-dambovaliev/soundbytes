@@ -1,0 +1,4 @@
+tempo(66);
+
+//c maj arpeggio
+play(c_5_8, e, a);

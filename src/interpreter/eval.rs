@@ -295,8 +295,37 @@ fn test_track() {
         panic!("expected Null object");
     }
 
-    if let Some(t) = env.get("a") {
+    if let Some(_) = env.get("a") {
         return;
     }
     panic!("expected `a` identifier to be stored in the env");
+}
+
+#[test]
+fn test_daniel_expr() {
+    let expr = "let t = 1; 1 - t * 4 + 3;";
+    let res = 0;
+    let lex = Lexer::new(expr);
+    let mut p = Parser::new(lex);
+    let program = p.parse_program();
+
+    assert_eq!(2, program.exprs.len());
+
+    let mut env = Env::new();
+
+    let exp = program.exprs.first().unwrap();
+    let evaluated = eval(exp.to_node(), &mut env);
+    let t = evaluated.get_type();
+    match &t {
+        Type::Null => {}
+        _ => panic!("expected Int, got {:?}", t),
+    }
+
+    let exp = program.exprs.get(1).unwrap();
+    let evaluated = eval(exp.to_node(), &mut env);
+    let t = evaluated.get_type();
+    match &t {
+        Type::Int(i) => assert_eq!(&res, i),
+        _ => panic!("expected Int, got {:?}", t),
+    }
 }

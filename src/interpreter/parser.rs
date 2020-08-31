@@ -290,6 +290,9 @@ impl Parser {
     }
 }
 
+#[cfg(test)]
+use crate::interpreter::ast::NodeType;
+
 #[test]
 fn test_call_expression_parsing() {
     let input = "play(c#_1_4*, c#_4_4);";
@@ -324,7 +327,7 @@ fn test_call_expression_parsing() {
 fn test_assignment() {
     let input = "let foo = c_4_4;";
 
-    let mut lex = Lexer::new(input);
+    let lex = Lexer::new(input);
     let mut p = Parser::new(lex);
     let prog = p.parse_program();
     println!("expr {:?}", prog.exprs);
