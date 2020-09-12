@@ -10,6 +10,7 @@ pub fn lookup_ident(ident: &str) -> TokenType {
 pub struct Token {
     pub ttype: TokenType,
     pub literal: String,
+    pub line: usize,
 }
 
 #[derive(Clone, Debug, Copy, Eq, PartialEq, Hash)]

@@ -25,26 +25,32 @@ lazy_static! {
     };
 }
 
-fn track(args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
-    let ins = match notes_to_ins(args) {
+fn track(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object> {
+    let ins = match notes_to_ins(args, line) {
         Ok(s) => s,
         Err(e) => return e,
     };
     Box::new(Instrument::new(ins))
 }
 
-fn play(args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
+fn play(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object> {
     if args.is_empty() {
         return new_error(
             "zero arguments given to play. what am i supposed to play, huh?".to_string(),
+            line,
         );
     }
 
     let first = args.first().unwrap().clone();
     let song = match first.clone().get_type() {
-        Type::Instrument(_) => ins_to_song(args),
-        Type::Sound(_) | Type::Chord(_) => notes_to_song(args),
-        _ => return new_error(format!("invalid argument for play {:?}", first.get_type())),
+        Type::Instrument(_) => ins_to_song(args, line),
+        Type::Sound(_) | Type::Chord(_) => notes_to_song(args, line),
+        _ => {
+            return new_error(
+                format!("invalid argument for play {:?}", first.get_type()),
+                line,
+            )
+        }
     };
     let song = match song {
         Ok(s) => s,
@@ -73,19 +79,19 @@ fn play(args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
     Box::new(Null {})
 }
 
-fn tempo(mut args: Vec<Box<dyn Object + 'static>>) -> Box<dyn Object> {
+fn tempo(mut args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object> {
     if args.len() != 1 {
-        return new_error(format!(
-            "wrong number of arguments. got={}, want=1",
-            args.len()
-        ));
+        return new_error(
+            format!("wrong number of arguments. got={}, want=1", args.len()),
+            line,
+        );
     }
 
     let arg: Box<dyn Object> = args.pop().unwrap();
 
     if let Type::Int(tempo) = arg.get_type() {
         if tempo <= 0 {
-            return new_error("tempo should be higher than 0".to_string());
+            return new_error("tempo should be higher than 0".to_string(), line);
         }
         let mut song_tempo = match TEMPO.lock() {
             Ok(s) => s,
@@ -105,10 +111,14 @@ fn new_opts() -> Options {
     }
 }
 
-fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, Box<dyn Object>> {
+fn notes_to_ins(
+    args: Vec<Box<dyn Object + 'static>>,
+    line: usize,
+) -> Result<InstrumentBox, Box<dyn Object>> {
     if args.is_empty() {
         return Err(new_error(
             "zero arguments given to track. i am expecting notes".to_string(),
+            line,
         ));
     }
 
@@ -129,6 +139,7 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
                     if sound.modified {
                         return Err(new_error(
                             "expected first note to have an octave and duration".to_string(),
+                            line,
                         ));
                     }
                     let s = sound.clone().get_sound();
@@ -139,12 +150,14 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
             _ => {
                 return Err(new_error(
                     "expected first note to have an octave and duration".to_string(),
+                    line,
                 ))
             }
         },
         _ => {
             return Err(new_error(
                 "expected first note to have an octave and duration".to_string(),
+                line,
             ))
         }
     }
@@ -173,10 +186,10 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
                 sounds.push_back(sound);
             }
             _ => {
-                return Err(new_error(format!(
-                    "expected note, argument {} is {}",
-                    i, info
-                )));
+                return Err(new_error(
+                    format!("expected note, argument {} is {}", i, info),
+                    line,
+                ));
             }
         }
     }
@@ -184,8 +197,11 @@ fn notes_to_ins(args: Vec<Box<dyn Object + 'static>>) -> Result<InstrumentBox, B
     Ok(Box::new(Synth::new(new_opts(), sounds)))
 }
 
-fn notes_to_song(args: Vec<Box<dyn Object + 'static>>) -> Result<Song, Box<dyn Object>> {
-    let instr = notes_to_ins(args)?;
+fn notes_to_song(
+    args: Vec<Box<dyn Object + 'static>>,
+    line: usize,
+) -> Result<Song, Box<dyn Object>> {
+    let instr = notes_to_ins(args, line)?;
     let song_tempo = match TEMPO.lock() {
         Ok(s) => s,
         Err(_) => panic!("cannot get song"),
@@ -196,7 +212,7 @@ fn notes_to_song(args: Vec<Box<dyn Object + 'static>>) -> Result<Song, Box<dyn O
     Ok(song)
 }
 
-fn ins_to_song(args: Vec<Box<dyn Object + 'static>>) -> Result<Song, Box<dyn Object>> {
+fn ins_to_song(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Result<Song, Box<dyn Object>> {
     let song_tempo = match TEMPO.lock() {
         Ok(s) => s,
         Err(_) => panic!("cannot get song"),
@@ -212,10 +228,10 @@ fn ins_to_song(args: Vec<Box<dyn Object + 'static>>) -> Result<Song, Box<dyn Obj
             i += 1;
             continue;
         }
-        return Err(new_error(format!(
-            "expected instrument, argument {} is {}",
-            i, info
-        )));
+        return Err(new_error(
+            format!("expected instrument, argument {} is {}", i, info),
+            line,
+        ));
     }
 
     Ok(song)

@@ -5,11 +5,11 @@ pub struct Lexer {
     position: usize,      // current position in input (points to current char)
     read_position: usize, // current reading position in input (after current char)
     pub(crate) ch: char,  // current char under examination
+    pub(crate) line: usize,
 }
 
 const DEFAULT_CHAR: char = '\x00';
 
-#[allow(dead_code)]
 impl Lexer {
     pub fn new(input: &str) -> Self {
         let chars: Vec<char> = input.chars().collect();
@@ -18,6 +18,7 @@ impl Lexer {
             position: 0,
             read_position: 0,
             ch: DEFAULT_CHAR,
+            line: 0,
         };
         lex.read_char();
         lex
@@ -30,16 +31,16 @@ impl Lexer {
         let tok;
 
         match self.ch {
-            '+' => tok = new_token(TokenType::Plus, self.ch),
-            '*' => tok = new_token(TokenType::Asterisk, self.ch),
-            '(' => tok = new_token(TokenType::Lparen, self.ch),
-            ')' => tok = new_token(TokenType::Rparen, self.ch),
-            ';' => tok = new_token(TokenType::Semicolon, self.ch),
-            '/' => tok = new_token(TokenType::Slash, self.ch),
-            '-' => tok = new_token(TokenType::Minus, self.ch),
-            ',' => tok = new_token(TokenType::Comma, self.ch),
-            '=' => tok = new_token(TokenType::Assign, self.ch),
-            DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR),
+            '+' => tok = new_token(TokenType::Plus, self.ch, self.line),
+            '*' => tok = new_token(TokenType::Asterisk, self.ch, self.line),
+            '(' => tok = new_token(TokenType::Lparen, self.ch, self.line),
+            ')' => tok = new_token(TokenType::Rparen, self.ch, self.line),
+            ';' => tok = new_token(TokenType::Semicolon, self.ch, self.line),
+            '/' => tok = new_token(TokenType::Slash, self.ch, self.line),
+            '-' => tok = new_token(TokenType::Minus, self.ch, self.line),
+            ',' => tok = new_token(TokenType::Comma, self.ch, self.line),
+            '=' => tok = new_token(TokenType::Assign, self.ch, self.line),
+            DEFAULT_CHAR => tok = new_token(TokenType::Eof, DEFAULT_CHAR, self.line),
             _ => {
                 if self.ch.is_alphabetic() {
                     let literal = self.read_ident();
@@ -47,24 +48,27 @@ impl Lexer {
                     return Token {
                         ttype: lookup_ident(&literal),
                         literal,
+                        line: self.line,
                     };
                 }
                 if self.ch.is_digit(10) {
                     return Token {
                         ttype: TokenType::Int,
                         literal: self.read_number(),
+                        line: self.line,
                     };
                 }
                 tok = Token {
                     ttype: TokenType::Illegal,
                     literal: self.ch.to_string(),
+                    line: self.line,
                 };
             }
         }
         self.read_char();
         tok
     }
-
+    #[allow(dead_code)]
     fn read_string(&mut self) -> String {
         let position = self.position + 1;
 
@@ -131,15 +135,34 @@ impl Lexer {
             None => DEFAULT_CHAR,
         };
 
+        if self.ch.to_string() == ENTER {
+            self.line += 1;
+        }
+
         self.position = self.read_position;
         self.read_position += 1;
     }
 }
+#[allow(dead_code)]
+const CR: &str = "\r";
+#[allow(dead_code)]
+const LF: &str = "\n";
+#[allow(dead_code)]
+const CRLF: &str = "\r\n";
 
-fn new_token(ttype: TokenType, ch: char) -> Token {
+/// newlines' character is CRLF. This indicate you're using Windows OS.
+#[cfg(target_os = "windows")]
+pub const ENTER: &str = CRLF;
+
+/// newlines' character is LF. This indicate you're using non-Windows OS.
+#[cfg(not(target_os = "windows"))]
+pub const ENTER: &str = LF;
+
+fn new_token(ttype: TokenType, ch: char, line: usize) -> Token {
     Token {
         ttype,
         literal: ch.to_string(),
+        line,
     }
 }
 
@@ -176,7 +199,6 @@ fn test_next_token() {
 
     for (key, token) in tokens_type.iter().enumerate() {
         let tok = lex.next_token();
-        //println!("token {:?}", tok);
         assert_eq!(token, &tok.ttype);
         assert_eq!(tokens_str[key], tok.literal);
     }
@@ -198,7 +220,6 @@ fn test_next_token_play() {
 
     for (key, token) in tokens_type.iter().enumerate() {
         let tok = lex.next_token();
-        println!("token {:?}", tok);
         assert_eq!(token, &tok.ttype);
         assert_eq!(tokens_str[key], tok.literal);
     }
@@ -247,23 +268,29 @@ a_4_32);";
     let tok = lex.next_token();
     assert_eq!(TokenType::Ident, tok.ttype);
     assert_eq!("tempo", tok.literal);
+    assert_eq!(1, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Lparen, tok.ttype);
+    assert_eq!(1, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Int, tok.ttype);
     assert_eq!("40", tok.literal);
+    assert_eq!(1, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Rparen, tok.ttype);
+    assert_eq!(1, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Semicolon, tok.ttype);
+    assert_eq!(1, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Ident, tok.ttype);
     assert_eq!("play", tok.literal);
+    assert_eq!(11, tok.line);
 }
 
 #[test]

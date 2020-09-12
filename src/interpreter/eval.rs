@@ -27,6 +27,9 @@ pub fn eval(node: Box<dyn Node>, env: &mut Env) -> Box<dyn Object> {
 
 fn eval_assign_statement(assign_statement: AssignStatement, env: &mut Env) -> Box<dyn Object> {
     let expr = eval(assign_statement.value.to_node(), env);
+    if expr.is_error() {
+        return expr;
+    }
     env.set(assign_statement.name.value, expr);
     Box::new(Null {})
 }
@@ -39,20 +42,23 @@ fn eval_prefix_expr(prefix_exp: PrefixExpression, env: &mut Env) -> Box<dyn Obje
     }
 
     match prefix_exp.operator.as_str() {
-        "-" => eval_minus_prefix(right),
-        _ => new_error(format!(
-            "unknown operator: '{}' {:?}",
-            prefix_exp.operator,
-            right.get_type()
-        )),
+        "-" => eval_minus_prefix(right, prefix_exp.token.line),
+        _ => new_error(
+            format!(
+                "unknown operator: '{}' {:?}",
+                prefix_exp.operator,
+                right.get_type()
+            ),
+            prefix_exp.token.line,
+        ),
     }
 }
 
-fn eval_minus_prefix(right: Box<dyn Object>) -> Box<dyn Object> {
+fn eval_minus_prefix(right: Box<dyn Object>, line: usize) -> Box<dyn Object> {
     let t = right.get_type();
     match t {
         Type::Int(i) => Box::new(IntObj { value: -i }),
-        _ => new_error(format!("unknown operator: -{:?}", t)),
+        _ => new_error(format!("unknown operator: -{:?}", t), line),
     }
 }
 
@@ -71,13 +77,13 @@ fn eval_call_exp(call_exp: CallExpression, env: &mut Env) -> Box<dyn Object> {
 
     let ins = func.inspect();
     if let Type::Builtin(function) = func.get_type() {
-        return function(args);
+        return function(args, call_exp.token.line);
     }
-    new_error(format!("not a function: {}", ins))
+    new_error(format!("not a function: {}", ins), call_exp.token.line)
 }
 
-pub fn new_error(msg: String) -> Box<dyn Object> {
-    let err: Box<dyn Object> = Box::new(Error { msg });
+pub fn new_error(msg: String, line: usize) -> Box<dyn Object> {
+    let err: Box<dyn Object> = Box::new(Error { msg, line });
     err
 }
 
@@ -97,40 +103,59 @@ fn eval_infix_expr(infix_exp: InfixExpression, env: &mut Env) -> Box<dyn Object>
 
     match (left.get_type(), right.get_type()) {
         // 5 + 5
-        (Type::Int(l), Type::Int(r)) => eval_int_infix_expr(&infix_exp.operator, l, r),
+        (Type::Int(l), Type::Int(r)) => {
+            eval_int_infix_expr(&infix_exp.operator, l, r, infix_exp.token.line)
+        }
         // c_4_16 + c_3_8
-        (Type::Sound(l), Type::Sound(r)) => eval_sound_infix_expr(&infix_exp.operator, l, r),
+        (Type::Sound(l), Type::Sound(r)) => {
+            eval_sound_infix_expr(&infix_exp.operator, l, r, infix_exp.token.line)
+        }
         // let chord = c_4_16 + c_3_8;
         // chord + c_5_16
-        (Type::Chord(l), Type::Sound(r)) => {
-            eval_chord_infix_expr(&infix_exp.operator, l, Chord::new(vec![r]))
-        }
+        (Type::Chord(l), Type::Sound(r)) => eval_chord_infix_expr(
+            &infix_exp.operator,
+            l,
+            Chord::new(vec![r]),
+            infix_exp.token.line,
+        ),
         // let chord_left = c_4_16 + c_3_8;
         // let chord_right = c_2_16 + c_3_8;
         // chord_left + chord_right
-        (Type::Chord(l), Type::Chord(r)) => eval_chord_infix_expr(&infix_exp.operator, l, r),
+        (Type::Chord(l), Type::Chord(r)) => {
+            eval_chord_infix_expr(&infix_exp.operator, l, r, infix_exp.token.line)
+        }
         // let chord = c_4_16 + c_3_8;
         // e_4_16 + chord
-        (Type::Sound(l), Type::Chord(r)) => {
-            eval_chord_infix_expr(&infix_exp.operator, Chord::new(vec![l]), r)
-        }
+        (Type::Sound(l), Type::Chord(r)) => eval_chord_infix_expr(
+            &infix_exp.operator,
+            Chord::new(vec![l]),
+            r,
+            infix_exp.token.line,
+        ),
         // c_4_16 + e
-        (Type::Sound(l), Type::Note(r)) => {
-            eval_note_infix_expr(&infix_exp.operator, Chord::new(vec![l]), r)
-        }
+        (Type::Sound(l), Type::Note(r)) => eval_note_infix_expr(
+            &infix_exp.operator,
+            Chord::new(vec![l]),
+            r,
+            infix_exp.token.line,
+        ),
 
         // let chord = c_4_16 + c_3_8;
         // chord + e
-        (Type::Chord(l), Type::Note(r)) => eval_note_infix_expr(&infix_exp.operator, l, r),
-
-        _ => new_error(format!(
-            "unknown operands for plus: left - {:?}  right - {:?}",
-            left_ins, right_ins
-        )),
+        (Type::Chord(l), Type::Note(r)) => {
+            eval_note_infix_expr(&infix_exp.operator, l, r, infix_exp.token.line)
+        }
+        _ => new_error(
+            format!(
+                "unknown operands for plus: left - {:?}  right - {:?}",
+                left_ins, right_ins
+            ),
+            infix_exp.token.line,
+        ),
     }
 }
 
-fn eval_note_infix_expr(op: &str, left: Chord, right: Note) -> Box<dyn Object> {
+fn eval_note_infix_expr(op: &str, left: Chord, right: Note, line: usize) -> Box<dyn Object> {
     let left_ins = left.inspect();
     let chord = match op {
         "+" => {
@@ -148,27 +173,33 @@ fn eval_note_infix_expr(op: &str, left: Chord, right: Note) -> Box<dyn Object> {
             let (o, d) = match (oct, dur) {
                 (Some(o), Some(d)) => (o, d),
                 _ => {
-                    return new_error(format!(
-                        "unknown operator: op: '{}'  left: {:?}  right: {:?}",
-                        op, left_ins, right
-                    ))
+                    return new_error(
+                        format!(
+                            "unknown operator: op: '{}'  left: {:?}  right: {:?}",
+                            op, left_ins, right
+                        ),
+                        line,
+                    )
                 }
             };
             sounds.push(Sound::new(PSound::new(right.get_note(), o, d), true));
             Chord::new(sounds)
         }
         _ => {
-            return new_error(format!(
-                "unknown operator: op: '{}'  left: {:?}  right: {:?}",
-                op, left, right
-            ))
+            return new_error(
+                format!(
+                    "unknown operator: op: '{}'  left: {:?}  right: {:?}",
+                    op, left, right
+                ),
+                line,
+            )
         }
     };
     let obj: Box<dyn Object> = Box::new(chord);
     obj
 }
 
-fn eval_chord_infix_expr(op: &str, left: Chord, right: Chord) -> Box<dyn Object> {
+fn eval_chord_infix_expr(op: &str, left: Chord, right: Chord, line: usize) -> Box<dyn Object> {
     let chord = match op {
         "+" => {
             let mut sounds = left.get_sounds();
@@ -176,41 +207,50 @@ fn eval_chord_infix_expr(op: &str, left: Chord, right: Chord) -> Box<dyn Object>
             sounds
         }
         _ => {
-            return new_error(format!(
-                "unknown operator: op: '{}'  left: {:?}  right: {:?}",
-                op, left, right
-            ))
+            return new_error(
+                format!(
+                    "unknown operator: op: '{}'  left: {:?}  right: {:?}",
+                    op, left, right
+                ),
+                line,
+            )
         }
     };
     let obj: Box<dyn Object> = Box::new(Chord::new(chord));
     obj
 }
 
-fn eval_sound_infix_expr(op: &str, left: Sound, right: Sound) -> Box<dyn Object> {
+fn eval_sound_infix_expr(op: &str, left: Sound, right: Sound, line: usize) -> Box<dyn Object> {
     let chord = match op {
         "+" => vec![left, right],
         _ => {
-            return new_error(format!(
-                "unknown operator: op: '{}'  left: {:?}  right: {:?}",
-                op, left, right
-            ))
+            return new_error(
+                format!(
+                    "unknown operator: op: '{}'  left: {:?}  right: {:?}",
+                    op, left, right
+                ),
+                line,
+            )
         }
     };
     let obj: Box<dyn Object> = Box::new(Chord::new(chord));
     obj
 }
 
-fn eval_int_infix_expr(op: &str, left: i32, right: i32) -> Box<dyn Object> {
+fn eval_int_infix_expr(op: &str, left: i32, right: i32, line: usize) -> Box<dyn Object> {
     let int = match op {
         "+" => left + right,
         "-" => left - right,
         "/" => left / right,
         "*" => left * right,
         _ => {
-            return new_error(format!(
-                "unknown operator: op: '{}'  left: '{}'  right: '{}'",
-                op, left, right
-            ))
+            return new_error(
+                format!(
+                    "unknown operator: op: '{}'  left: '{}'  right: '{}'",
+                    op, left, right
+                ),
+                line,
+            )
         }
     };
     let obj: Box<dyn Object> = Box::new(IntObj { value: int });
@@ -241,6 +281,7 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
                     token: Token {
                         ttype: TokenType::Ident,
                         literal: note.to_string(),
+                        line: ident.token.line,
                     },
                     value: note.to_string(),
                 },
@@ -250,10 +291,10 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
             let ins = n_eval.inspect();
             match n_eval.get_type() {
                 Type::Note(note) => note,
-                _ => return new_error(ins),
+                _ => return new_error(ins, ident.token.line),
             }
         }
-        _ => return new_error("missing note argument".to_string()),
+        _ => return new_error("missing note argument".to_string(), ident.token.line),
     };
 
     let oct_ = match n.get_note() {
@@ -268,6 +309,7 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
                     token: Token {
                         ttype: TokenType::Ident,
                         literal: format!("o{}", o),
+                        line: ident.token.line,
                     },
                     value: format!("o{}", o),
                 },
@@ -276,7 +318,7 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
 
             match oct_eval.get_type() {
                 Type::Octave(o) => o,
-                _ => return new_error("invalid note arg 2 octave".to_string()),
+                _ => return new_error("invalid note arg 2 octave".to_string(), ident.token.line),
             }
         }
         _ => return Box::new(n),
@@ -289,6 +331,7 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
                     token: Token {
                         ttype: TokenType::Ident,
                         literal: format!("d{}", d),
+                        line: ident.token.line,
                     },
                     value: format!("d{}", d),
                 },
@@ -297,10 +340,15 @@ fn eval_note_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
             let ins = dur_eval.inspect();
             match dur_eval.get_type() {
                 Type::Duration(d) => d,
-                _ => return new_error(format!("invalid note duration `{:?}`", ins)),
+                _ => {
+                    return new_error(
+                        format!("invalid note duration `{:?}`", ins),
+                        ident.token.line,
+                    )
+                }
             }
         }
-        _ => return new_error("missing note duration".to_string()),
+        _ => return new_error("missing note duration".to_string(), ident.token.line),
     };
 
     Box::new(Sound {
@@ -327,7 +375,10 @@ fn eval_ident(ident: Identifier, env: &Env) -> Box<dyn Object> {
         return eval_note_ident(ident, env);
     }
 
-    new_error(format!("not found: `{}`", ident.to_string()))
+    new_error(
+        format!("not found: `{}`", ident.to_string()),
+        ident.token.line,
+    )
 }
 
 #[cfg(test)]

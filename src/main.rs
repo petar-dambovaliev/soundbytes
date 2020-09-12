@@ -16,7 +16,7 @@ use std::fs::File;
 use std::io::stdout;
 
 fn main() {
-    env::set_var("RUST_LOG", "soundbytes=info");
+    env::set_var("RUST_LOG", "soundbytes=warn");
     env_logger::init();
     let args: Vec<String> = env::args().collect();
 

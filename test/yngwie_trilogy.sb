@@ -2,10 +2,8 @@ let t = 66;
 
 tempo(t);
 
-// write vscode plugin
-// add lines in the error messages
-// allow for trailing comments
 // implement export code for https://lilypond.org/text-input.html
+// add vibrato
 
 let bass = track(a_3_8*, b, g#_2_8*, a_3_8*, f_2_8*, f#, g, g);
 let bass2 = track(x_8*, x, g#_2_16, b_3_16, d, f, e, c_2_16, e);
@@ -18,7 +16,7 @@ let solo = track(
         b, a, b, c, d, e, f, g
 );
 
-play(bass, bass2, solo);
+play(bass, bass2, solo, x_8);//trailing comment // error with line number
 
 play(x_16);
 

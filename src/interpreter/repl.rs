@@ -1,6 +1,6 @@
 use crate::interpreter::eval::eval;
 use crate::interpreter::lexer::Lexer;
-use crate::interpreter::object::{Duration, Env, Note, Octave};
+use crate::interpreter::object::{Duration, Env, Note, Object, Octave, Type};
 use crate::interpreter::parser::Parser;
 use crate::player::sound::{Note as PNote, Octave as POctave};
 use crate::player::tempo::Duration as PDUration;
@@ -22,8 +22,10 @@ pub fn start(in_: impl Read, mut out: impl Write) {
     let program = Box::new(p.parse_program());
     for expr in program.exprs {
         let evaluated = eval(expr.to_node(), &mut env);
-        let _ = out.write(evaluated.inspect().as_bytes());
-        let _ = out.write(b"\n");
+        if let Type::Error(e) = evaluated.get_type() {
+            let _ = out.write(e.inspect().as_bytes());
+            let _ = out.write(b"\n");
+        }
     }
 }
 

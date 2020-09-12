@@ -10,7 +10,7 @@ pub enum Type {
     String(String),
     Builtin(DefaultBuiltinFunc),
     TimeSignature(TimeSignature),
-    Error(String),
+    Error(Error),
     Sound(Sound),
     Chord(Chord),
     Instrument(Instrument),
@@ -28,7 +28,7 @@ impl Debug for Type {
             Self::String(i) => f.write_str(&format!("String({})", i)),
             Self::Builtin(_) => f.write_str("Builtin()"),
             Self::TimeSignature(ts) => f.write_str(&format!("TimeSignature({}/{})", ts.n, ts.dur)),
-            Self::Error(i) => f.write_str(&format!("Error({})", i)),
+            Self::Error(i) => f.write_str(&format!("Error({:?})", i)),
             Self::Sound(n) => f.write_str(&n.inspect()),
             Self::Chord(c) => f.write_str(&format!("chord {:?}", c)),
             Self::Instrument(n) => f.write_str(&n.inspect()),
@@ -290,7 +290,7 @@ impl Object for StringObj {
 
 pub trait BuiltinFn: Fn(Vec<ObjectBox>) -> ObjectBox + Sync {}
 impl BuiltinFn for fn(Vec<ObjectBox>) -> ObjectBox {}
-type DefaultBuiltinFunc = fn(Vec<Box<dyn Object + 'static>>) -> ObjectBox;
+type DefaultBuiltinFunc = fn(Vec<Box<dyn Object + 'static>>, line: usize) -> ObjectBox;
 
 #[derive(Clone, Debug)]
 pub struct BuiltinObj {
@@ -309,14 +309,15 @@ impl Object for BuiltinObj {
 #[derive(Clone, Debug)]
 pub struct Error {
     pub(crate) msg: String,
+    pub(crate) line: usize,
 }
 
 impl Object for Error {
     fn get_type(self: Box<Self>) -> Type {
-        Type::Error(self.msg)
+        Type::Error(*self)
     }
     fn inspect(&self) -> String {
-        format!("ERROR: {}", self.msg)
+        format!("LINE {} ERROR: {}", self.line, self.msg)
     }
     fn is_error(&self) -> bool {
         true

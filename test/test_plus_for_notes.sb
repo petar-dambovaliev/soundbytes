@@ -1,8 +1,13 @@
 tempo(66);
 
-//c maj arpeggio
-play(c_3_8 + e + g, x_8);
+let c_maj_arp = c_3_8 + e + g;
 
+//c maj arpeggio
+play(c_3_8, e, g);
+play(c_maj_arp, x_8);
+
+play(c_4_4, e, g);
 play(c_4_4 + e + g, x_8);
 
+play(c_5_4, e, g);
 play(c_5_4 + e + g);
