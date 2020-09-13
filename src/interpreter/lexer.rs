@@ -18,7 +18,7 @@ impl Lexer {
             position: 0,
             read_position: 0,
             ch: DEFAULT_CHAR,
-            line: 0,
+            line: 1,
         };
         lex.read_char();
         lex
@@ -268,29 +268,29 @@ a_4_32);";
     let tok = lex.next_token();
     assert_eq!(TokenType::Ident, tok.ttype);
     assert_eq!("tempo", tok.literal);
-    assert_eq!(1, tok.line);
+    assert_eq!(2, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Lparen, tok.ttype);
-    assert_eq!(1, tok.line);
+    assert_eq!(2, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Int, tok.ttype);
     assert_eq!("40", tok.literal);
-    assert_eq!(1, tok.line);
+    assert_eq!(2, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Rparen, tok.ttype);
-    assert_eq!(1, tok.line);
+    assert_eq!(2, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Semicolon, tok.ttype);
-    assert_eq!(1, tok.line);
+    assert_eq!(2, tok.line);
 
     let tok = lex.next_token();
     assert_eq!(TokenType::Ident, tok.ttype);
     assert_eq!("play", tok.literal);
-    assert_eq!(11, tok.line);
+    assert_eq!(12, tok.line);
 }
 
 #[test]

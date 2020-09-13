@@ -210,7 +210,10 @@ impl Object for Sound {
     }
 
     fn inspect(&self) -> String {
-        format!("Object Sound: {:?}", self)
+        format!(
+            "note: {:?} duration: {:?} octave: {:?}",
+            self.sound.note, self.sound.duration, self.sound.octave
+        )
     }
 }
 

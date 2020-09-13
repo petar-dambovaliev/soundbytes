@@ -414,7 +414,9 @@ fn test_eval_int_expr() {
 }
 
 #[test]
-#[should_panic(expected = "not implemented: prefix Token { ttype: Illegal, literal: \".\" }")]
+#[should_panic(
+    expected = "not implemented: prefix Token { ttype: Illegal, literal: \".\", line: 1 }"
+)]
 fn test_eval_float_not_implemented_expr() {
     let expr = "5.5";
 
@@ -427,6 +429,13 @@ fn test_eval_float_not_implemented_expr() {
     }
 }
 
+#[cfg(test)]
+use crate::interpreter::object::{Duration, Octave};
+#[cfg(test)]
+use crate::player::sound::Octave as POctave;
+#[cfg(test)]
+use crate::player::tempo::Duration as PDuration;
+
 #[test]
 fn test_track() {
     let expr = "let a = track(a_3_8*);";
@@ -435,17 +444,25 @@ fn test_track() {
     let program = p.parse_program();
     let mut env = Env::new();
 
+    env.set("a".to_string(), Box::new(Note::new(PNote::A)));
+    env.set("o3".to_string(), Box::new(Octave::new(POctave::Three)));
+    env.set(
+        "d8*".to_string(),
+        Box::new(Duration::new(PDuration::EightDotted)),
+    );
+
     assert_eq!(1, program.exprs.len());
 
     for exp in program.exprs {
         let obj = eval(exp.to_node(), &mut env);
-        if let Type::Null = obj.get_type() {
+        let ttype = obj.get_type();
+        if let Type::Null = ttype {
             return;
         }
-        panic!("expected Null object");
+        panic!("expected Null object got :{:?}", ttype);
     }
 
-    if let Some(_) = env.get("a") {
+    if env.get("a").is_some() {
         return;
     }
     panic!("expected `a` identifier to be stored in the env");
