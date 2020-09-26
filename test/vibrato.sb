@@ -1,0 +1,5 @@
+tempo(66);
+
+let c_maj_arp = c_3_4 + e + g;
+let v = vib(50, 50, c_4_1 + e + g);
+play(v);

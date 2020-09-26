@@ -1,6 +1,7 @@
 use crate::interpreter::eval::new_error;
-use crate::interpreter::object::{BuiltinObj, Instrument, Object};
+use crate::interpreter::object::{BuiltinObj, Chord, Instrument, Object, Sound, Sounds};
 use crate::interpreter::object::{Null, Type};
+use crate::player::effect::Vibrato;
 use crate::player::instrument::{InstrumentBox, Options, Synth};
 use crate::player::oscillator::AnalogSaw;
 use crate::player::play::{PlayErr, Player};
@@ -20,9 +21,86 @@ lazy_static! {
         hm.insert("tempo".to_string(), BuiltinObj { value: tempo });
         hm.insert("play".to_string(), BuiltinObj { value: play });
         hm.insert("track".to_string(), BuiltinObj { value: track });
+        hm.insert("vib".to_string(), BuiltinObj { value: vibrato });
 
         hm
     };
+}
+
+fn vibrato(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object> {
+    if args.len() < 3 {
+        return new_error(
+            "expecting at least 1 (note, sound, track), depth and phase for vibrato".to_string(),
+            line,
+        );
+    }
+    let mut args = VecDeque::from(args);
+    let phase_el = match args.pop_front() {
+        Some(a) => a,
+        None => {
+            return new_error(
+                "expecting at least 1 (note, sound, track), depth and phase for vibrato"
+                    .to_string(),
+                line,
+            )
+        }
+    };
+    let depth_el = match args.pop_front() {
+        Some(a) => a,
+        None => {
+            return new_error(
+                "expecting at least 1 (note, sound, track), depth and phase for vibrato"
+                    .to_string(),
+                line,
+            )
+        }
+    };
+
+    let phase_ins = phase_el.inspect();
+    let phase = match phase_el.get_type() {
+        Type::Int(i) => i,
+        _ => {
+            return new_error(
+                format!("invalid phase: expected integer, got {}", phase_ins),
+                line,
+            )
+        }
+    };
+
+    let depth_ins = depth_el.inspect();
+    let depth = match depth_el.get_type() {
+        Type::Int(i) => i,
+        _ => {
+            return new_error(
+                format!("invalid phase: expected integer, got {}", depth_ins),
+                line,
+            )
+        }
+    };
+
+    let mut sounds = match notes_to_sounds(Vec::from(args), line) {
+        Ok(s) => s,
+        Err(e) => return e,
+    };
+
+    for chord in sounds.iter_mut() {
+        for mut sound in chord.iter_mut() {
+            let vib = Box::new(Vibrato::new(depth as f32, phase as f32));
+            match sound.effects.as_mut() {
+                Some(e_box) => e_box.push(vib),
+                None => sound.effects = Some(vec![vib]),
+            }
+        }
+    }
+
+    let mut sound_chords = VecDeque::with_capacity(sounds.len());
+
+    for sound in sounds {
+        let a: Vec<Sound> = sound.iter().map(|s| Sound::new(s.clone(), false)).collect();
+        sound_chords.push_back(Chord::new(a));
+    }
+
+    Box::new(Sounds::new(sound_chords))
 }
 
 fn track(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object> {
@@ -44,7 +122,7 @@ fn play(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object> {
     let first = args.first().unwrap().clone();
     let song = match first.clone().get_type() {
         Type::Instrument(_) => ins_to_song(args, line),
-        Type::Sound(_) | Type::Chord(_) => notes_to_song(args, line),
+        Type::Sound(_) | Type::Chord(_) | Type::Sounds(_) => notes_to_song(args, line),
         _ => {
             return new_error(
                 format!("invalid argument for play {:?}", first.get_type()),
@@ -111,10 +189,10 @@ fn new_opts() -> Options {
     }
 }
 
-fn notes_to_ins(
+fn notes_to_sounds(
     args: Vec<Box<dyn Object + 'static>>,
     line: usize,
-) -> Result<InstrumentBox, Box<dyn Object>> {
+) -> Result<VecDeque<Vec<PSound>>, Box<dyn Object>> {
     if args.is_empty() {
         return Err(new_error(
             "zero arguments given to track. i am expecting notes".to_string(),
@@ -147,6 +225,7 @@ fn notes_to_ins(
                     def_dur = s.duration;
                 }
             }
+            Type::Sounds(_) => {}
             _ => {
                 return Err(new_error(
                     "expected first note to have an octave and duration".to_string(),
@@ -185,6 +264,16 @@ fn notes_to_ins(
                 }
                 sounds.push_back(sound);
             }
+            Type::Sounds(s) => {
+                for get_sound in s.get_sounds() {
+                    let chord = get_sound.get_sounds();
+                    let mut sound = Vec::with_capacity(chord.len());
+                    for s in chord {
+                        sound.push(s.sound);
+                    }
+                    sounds.push_back(sound);
+                }
+            }
             _ => {
                 return Err(new_error(
                     format!("expected note, argument {} is {}", i, info),
@@ -193,7 +282,14 @@ fn notes_to_ins(
             }
         }
     }
+    Ok(sounds)
+}
 
+fn notes_to_ins(
+    args: Vec<Box<dyn Object + 'static>>,
+    line: usize,
+) -> Result<InstrumentBox, Box<dyn Object>> {
+    let sounds = notes_to_sounds(args, line)?;
     Ok(Box::new(Synth::new(new_opts(), sounds)))
 }
 

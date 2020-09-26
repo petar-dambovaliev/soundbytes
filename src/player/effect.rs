@@ -33,7 +33,6 @@ pub struct Vibrato {
     speed: f32,
 }
 
-#[allow(dead_code)]
 impl Vibrato {
     pub fn new(depth: f32, phase: f32) -> Self {
         Self {

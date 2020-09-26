@@ -4,7 +4,6 @@ tempo(t);
 
 // implement export code for https://lilypond.org/text-input.html
 // add vibrato
-// add main file for playing multiple files
 // think about how to add lyrics
 
 let bass = track(a_3_8*, b, g#_2_8*, a_3_8*, f_2_8*, f#, g, g);
