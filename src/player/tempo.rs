@@ -39,6 +39,8 @@ pub enum Duration {
     Sixteenth,
     ThirtySecondDotted,
     ThirtySecond,
+    SixtyFourthDotted,
+    SixtyFourth,
 }
 
 impl Duration {
@@ -55,6 +57,8 @@ impl Duration {
             Self::Sixteenth => 0.25,
             Self::ThirtySecondDotted => 0.1875,
             Self::ThirtySecond => 0.125,
+            Self::SixtyFourthDotted => 0.09375,
+            Self::SixtyFourth => 0.0625,
         }
     }
 }
@@ -83,6 +87,9 @@ impl SampleClock {
     }
     pub(crate) fn get_clock(&self) -> f32 {
         self.cur
+    }
+    pub(crate) fn get_dur(&self) -> f32 {
+        self.dur
     }
     pub(crate) fn has_ended(&self) -> bool {
         self.ended

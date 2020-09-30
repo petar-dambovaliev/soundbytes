@@ -35,11 +35,11 @@ fn vibrato(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object>
         );
     }
     let mut args = VecDeque::from(args);
-    let phase_el = match args.pop_front() {
+    let speed_el = match args.pop_front() {
         Some(a) => a,
         None => {
             return new_error(
-                "expecting at least 1 (note, sound, track), depth and phase for vibrato"
+                "expecting at least 1 (note, sound, track), speed and depth for vibrato"
                     .to_string(),
                 line,
             )
@@ -49,19 +49,19 @@ fn vibrato(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object>
         Some(a) => a,
         None => {
             return new_error(
-                "expecting at least 1 (note, sound, track), depth and phase for vibrato"
+                "expecting at least 1 (note, sound, track), speed and depth for vibrato"
                     .to_string(),
                 line,
             )
         }
     };
 
-    let phase_ins = phase_el.inspect();
-    let phase = match phase_el.get_type() {
+    let speed_ins = speed_el.inspect();
+    let speed = match speed_el.get_type() {
         Type::Int(i) => i,
         _ => {
             return new_error(
-                format!("invalid phase: expected integer, got {}", phase_ins),
+                format!("invalid speed: expected integer, got {}", speed_ins),
                 line,
             )
         }
@@ -85,7 +85,7 @@ fn vibrato(args: Vec<Box<dyn Object + 'static>>, line: usize) -> Box<dyn Object>
 
     for chord in sounds.iter_mut() {
         for mut sound in chord.iter_mut() {
-            let vib = Box::new(Vibrato::new(depth as f32, phase as f32));
+            let vib = Box::new(Vibrato::new(depth as f32, speed as f32));
             match sound.effects.as_mut() {
                 Some(e_box) => e_box.push(vib),
                 None => sound.effects = Some(vec![vib]),

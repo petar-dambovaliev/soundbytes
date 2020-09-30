@@ -1,0 +1,24 @@
+tempo(90);
+
+let intro = track(e_4_8*, c_4_8, e_4_8, g_4_8*, g_3_8, x);
+let start = track(
+    c_4_32*, x, x, g_3_32*, x, x, e, x, x, a_4_32*, x, b, x, a#, a, x,
+    g_3_32*, e_4_32*, x, g, a_5_32*, x, f_4_32*, g, x, e, x, c, d, b, x, x
+);
+
+let middle = track(
+    g_3_32*, f#, f, d#, x, e, x_16,
+    g#_2_32*, a_3_32*, c_3_16, x, a_3_32*, c, d, x_16,
+    g_3_32*, f#, f, d#, x, e, x,
+    c_4_32, x, x, c, c, x, x, x,
+    g_3_32*, f#, f, d#, x, e, x_16,
+    g#_2_32*, a_3_32*, c_3_16, x, a_3_32*, c, d, x_8,
+    e_2_32*, x, d, x, vib(20, 20, c_2_4)
+);
+
+play(intro);
+
+// doubling up on the same thing makes it louder
+play(start, start);
+play(start, start);
+play(middle, middle);

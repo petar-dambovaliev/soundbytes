@@ -29,25 +29,20 @@ impl Clone for EffectBox {
 #[derive(Debug, Clone)]
 pub struct Vibrato {
     depth: f32,
-    phase: f32,
     speed: f32,
 }
 
 impl Vibrato {
-    pub fn new(depth: f32, phase: f32) -> Self {
-        Self {
-            depth,
-            phase,
-            speed: 0.00000001,
-        }
+    pub fn new(depth: f32, speed: f32) -> Self {
+        Self { depth, speed }
     }
 }
 
 impl Effect for Vibrato {
     fn get_frequency(&self, sample_clock: &SampleClock) -> f32 {
-        (sample_clock.get_clock() * 0.001).sin()
+        (sample_clock.get_clock() * (self.speed * 0.0001)).sin()
             * self.depth
-            * sample_clock.get_clock()
-            * (self.speed + 0.0000005)
+            * sample_clock.get_dur()
+            * 0.0000001
     }
 }

@@ -76,6 +76,8 @@ fn inject_predeclared(env: &mut Env) {
     inject_dur(PDUration::Sixteenth, "d16");
     inject_dur(PDUration::ThirtySecondDotted, "d32*");
     inject_dur(PDUration::ThirtySecond, "d32");
+    inject_dur(PDUration::SixteenthDotted, "d64*");
+    inject_dur(PDUration::SixtyFourth, "d64");
 }
 
 #[allow(dead_code)]
