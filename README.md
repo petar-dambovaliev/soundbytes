@@ -36,6 +36,10 @@ For the convenience of the user, if the octave and duration are identical, they 
 
 `track(c_4_16, c#_4_16*, c_4_16, c, a, b)`
 
+Add vibrato with 10 speed, 5 depth on the note e
+ 
+`vib(10, 5, e_4_1)`
+
 Playing the tracks
 
 ```
